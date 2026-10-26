@@ -1,0 +1,17 @@
+# PR 브랜치 이름으로 라벨을 자동으로 붙입니다.
+# feat/ 기능 · 실험 코드, fix/ 버그, docs/ 문서, refactor/ 구조 정리, data/ 데이터 처리
+
+enhancement:
+  - head-branch: ['^feat/']
+
+bug:
+  - head-branch: ['^fix/']
+
+documentation:
+  - head-branch: ['^docs/']
+
+refactor:
+  - head-branch: ['^refactor/']
+
+data:
+  - head-branch: ['^data/']
