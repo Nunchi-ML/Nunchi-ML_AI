@@ -66,4 +66,6 @@ pip install -r requirements.txt
 | 🔍 리뷰 | 코멘트 등급 P1 꼭 고침 · P2 고치면 좋음 · P3 의견 |
 | 🏷️ 라벨 | 브랜치 이름으로 자동으로 붙음 |
 
+📘 파일 이름 규칙 · 올리면 안 되는 것 · 설치 없이 웹에서 올리는 법: [노션 「GitHub 컨벤션」](https://app.notion.com/p/c86986ef9f3a4a3caedabfc16b6ff0b7)
+
 </details>
