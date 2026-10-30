@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=70"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nunchi-glare"
+version = "0.1.0"
+description = "Shared full-frame glare features and pilot LightGBM inference"
+requires-python = ">=3.11"
+dependencies = [
+  "numpy>=2.1,<3", "pandas>=3,<4", "opencv-python-headless>=5,<6",
+  "scikit-learn>=1.5,<2", "lightgbm>=4.5,<5", "joblib>=1.4,<2",
+]
+
+[tool.setuptools]
+packages = ["nunchi_glare"]
+package-dir = {nunchi_glare = "src/glare"}

@@ -32,3 +32,6 @@ models/*
 *.pkl
 *.joblib
 _cache/
+build/
+dist/
+*.egg-info/
