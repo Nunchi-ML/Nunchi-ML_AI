@@ -13,7 +13,7 @@ import pandas as pd
 from sklearn.metrics import accuracy_score, confusion_matrix, f1_score, recall_score
 from sklearn.model_selection import GroupKFold
 
-from src.glare.features import FEATURES
+from .features import FEATURES
 
 SEED = 0
 
@@ -21,8 +21,16 @@ SEED = 0
 def load(features_csv, labels_csv):
     f = pd.read_csv(features_csv)
     lab = pd.read_csv(labels_csv)
-    d = lab.merge(f, on=["vid", "file"], how="left")
-    assert d[FEATURES].notna().all().all(), "라벨 파일의 사진이 특징 파일에 없음"
+    keys = ["vid", "file"]
+    if lab.duplicated(keys).any() or f.duplicated(keys).any():
+        raise ValueError("Duplicate image keys in labels or features")
+    if not lab.label.isin([0, 1, 2]).all() or set(lab.label) != {0, 1, 2}:
+        raise ValueError("Labels must contain all three classes: 0, 1, 2")
+    d = lab.merge(f, on=keys, how="left", validate="one_to_one")
+    if not np.isfinite(d[FEATURES].to_numpy(dtype=float)).all():
+        raise ValueError("Missing or non-finite image features")
+    if d.vid.nunique() < 5:
+        raise ValueError("At least five videos are required for GroupKFold")
     return d
 
 
@@ -48,7 +56,7 @@ def brightness_rule(feature):
 
 def lightgbm_model():
     return lgb.LGBMClassifier(n_estimators=200, learning_rate=0.05, num_leaves=7, min_child_samples=5,
-                              class_weight="balanced", random_state=SEED, verbose=-1)
+                              class_weight="balanced", random_state=SEED, n_jobs=1, verbose=-1)
 
 
 def lightgbm(tr, te):

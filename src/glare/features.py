@@ -28,10 +28,28 @@ FEATURES = [
     "brightest_val",    # 가장 밝은 점의 밝기
 ]
 
+PREPROCESSING = {
+    "version": "glare-full-frame-v1",
+    "crop": "none",
+    "resize": [640, 368],
+    "interpolation": "INTER_LINEAR",
+    "color": "BGR uint8",
+    "mirror": False,
+    "brightest_coordinates": "normalized full frame, top-left origin",
+}
+
 
 def extract(path):
     im = cv2.imdecode(np.fromfile(path, np.uint8), cv2.IMREAD_COLOR)
-    im = cv2.resize(im, (640, 368))
+    return extract_array(im)
+
+
+def extract_array(im):
+    """전체 BGR 화면을 학습과 동일하게 처리한다. crop/미러링을 하지 않는다."""
+    if (not isinstance(im, np.ndarray) or im.dtype != np.uint8
+            or im.ndim != 3 or im.shape[2] != 3 or min(im.shape[:2]) < 1):
+        raise ValueError("Expected a non-empty uint8 BGR image")
+    im = cv2.resize(im, (640, 368), interpolation=cv2.INTER_LINEAR)
     g = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
     h, w = g.shape
     sky = g[: int(h * 0.45)]

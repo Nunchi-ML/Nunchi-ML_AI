@@ -55,10 +55,23 @@
 
 ## 📦 모델 넘기기 (AI → BE)
 
-1. 전처리 + 모델을 sklearn `Pipeline` 하나로 묶어 `joblib`으로 저장합니다
-2. 파이프라인 안에는 sklearn · LightGBM **기본 부품만** 씁니다 (직접 만든 클래스가 들어가면 BE에서 파일이 안 열립니다)
-3. 이 저장소 **Release**에 파일을 붙이고 (태그 예: `model-v1`), 노션 「웹사이트 명세」 모델 교체 기록에 실험 번호를 적습니다
-4. 저장할 때 쓴 **scikit-learn 버전**을 Release 설명에 적고, BE `requirements.txt`도 같은 버전으로 맞춥니다
+모델②는 LightGBM `model2.joblib` + `meta.json` + 공통 전처리/추론 `nunchi-glare` wheel + 기준 JPEG 3장을 한 묶음으로 전달합니다. pickle에 사용자 정의 클래스를 넣거나 BE에서 특징 코드를 복제하지 않습니다. 전체 프레임을 640×368로 변환하는 기존 학습 방식은 유지합니다.
+
+AI 폴더에서 실행 (로컬 데이터는 git 제외):
+
+```bash
+python -m src.glare.export_model --images ../../data/glare --features ../../data/glare/pilot_glare/glare_features.csv --labels ../../data/glare/pilot_glare/pilot_labels.csv --out models/model2-pilot-v1
+python -m pip wheel --no-deps --no-build-isolation --wheel-dir models/model2-pilot-v1 .
+python -m src.glare.bundle_model models/model2-pilot-v1 models/model2-pilot-v1.zip
+```
+
+setuptools>=70이 필요합니다. export는 130장 특징을 원본에서 다시 계산해 CSV와 비교하고, 영상별 GroupKFold 5겹으로 원본·JPEG95 전송 모사·밝기 기준선을 평가한 뒤 전체 시범 라벨로 fit합니다. 점수·영상 분할·라벨 출처와 해시·원본 해상도 분포·라이브러리 버전을 meta.json에 기록합니다. wheel은 export와 같은 코드에서 다시 빌드해야 하며, BE는 모델·특징 해시·런타임 버전을 확인합니다.
+
+시범 재현: 원본 macro F1 0.57135 → JPEG95 0.56477, 심함 재현율 모두 0.51852. Claude 보조 시범 라벨이며 **2인 독립 검증 전**입니다. 브라우저 JPEG·휴대폰·시뮬레이터 합성 화면의 성능을 보장하지 않습니다. 결과 기준 JPEG의 예측은 정답과 다를 수 있습니다.
+
+팀 Release로 전달할 때 모델·wheel·meta·원본 출처/이용 조건을 함께 적고 BE 의존성 버전을 맞춥니다. 실제 Release 발행·배포는 아직 하지 않았습니다. FE는 Vercel, BE는 Render이며 신천대로·달구벌대로 모두 MVP 필수입니다.
+
+`bundle_model`은 모델·전처리 해시와 기준 사진 예측을 확인하고 zip에 manifest(파일별 SHA-256)를 넣습니다. 같은 폴더의 `.zip.sha256`은 BE `MODEL_BUNDLE_SHA256`에 지정합니다. zip을 팀 AI Release에 올리고 해당 태그의 고정 asset URL을 `MODEL_BUNDLE_URL`로 사용합니다. 현재는 로컬 bundle 준비이며 Release 공개 전입니다.
 
 ## 🚀 실행
 
