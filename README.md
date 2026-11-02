@@ -4,7 +4,7 @@
 
 # Nunchi-ML_AI
 
-데이터 정제 · EDA · 모델 ① 구간 사고 예측 · 모델 ② 화면 눈부심 분류
+데이터 정제 · EDA · 모델 ① 구간 사고 예측 · 모델 ② 화면 눈부심 분류 · 모델 ③ 터널 순응 부담
 
 ![Python](https://img.shields.io/badge/Python-3776AB?style=flat-square&logo=python&logoColor=white) ![pandas](https://img.shields.io/badge/pandas-150458?style=flat-square&logo=pandas&logoColor=white) ![scikit--learn](https://img.shields.io/badge/scikit--learn-F7931E?style=flat-square&logo=scikitlearn&logoColor=white) ![LightGBM](https://img.shields.io/badge/LightGBM-2E7D32?style=flat-square) ![GeoPandas](https://img.shields.io/badge/GeoPandas-139C5A?style=flat-square) ![OpenCV](https://img.shields.io/badge/OpenCV-5C3EE8?style=flat-square&logo=opencv&logoColor=white) ![pvlib](https://img.shields.io/badge/pvlib-F2522E?style=flat-square) ![SHAP](https://img.shields.io/badge/SHAP-FF0D57?style=flat-square) ![Optuna](https://img.shields.io/badge/Optuna-2C5BB4?style=flat-square)
 
@@ -39,6 +39,7 @@
 | 영상 → 프레임, 화면 숫자 뽑기 | OpenCV |
 | 모델 ① 구간 사고 건수 | LightGBM (포아송) · 비교 기준선 statsmodels 포아송 회귀 |
 | 모델 ② 눈부심 3단계 분류 | LightGBM · scikit-learn · 비교 기준선 밝기 규칙 |
+| 모델 ③ 터널 순응 부담 | statsmodels 조건부 로지스틱 (같은 자리 비교) |
 | 검증 | scikit-learn GroupKFold (도로별 · 촬영 날짜별로 나눔) |
 | 중요 변수 · 튜닝 | SHAP · Optuna |
 
