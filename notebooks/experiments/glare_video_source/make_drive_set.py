@@ -64,6 +64,7 @@ def main():
         blind.insert(0, "no", range(1, len(blind) + 1))
         blind.assign(label="", confidence="", note="").to_csv(p / "label_sheet_blind.csv", index=False, encoding="utf-8-sig")
         pd.read_csv(OUT / "attribution.csv").merge(d[["id"]]).to_csv(p / "attribution.csv", index=False, encoding="utf-8-sig")
+        shutil.copy2(HERE / "label_tool.html", p / "label_tool.html")      # 압축 하나만 받으면 바로 시작
         z = shutil.make_archive(str(OUT / "drive_pack"), "zip", p)
         print(f"\n두 번째 라벨러용 {len(blind)}장 → {z} ({Path(z).stat().st_size / 1e6:.1f} MB)")
 
