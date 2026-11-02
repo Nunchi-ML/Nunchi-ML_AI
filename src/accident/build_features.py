@@ -5,8 +5,11 @@ Q1 연구 질문(해 정면 vs 등 뒤 사고 비교)을 검증하고 결과를 
     python -m src.accident.build_features
 """
 import os
+import sys
 import numpy as np
 import pandas as pd
+
+sys.stdout.reconfigure(encoding="utf-8")
 
 from src.accident.bearing import compute_road_bearing
 from src.accident.solar import compute_solar_positions, compute_relative_angle, classify_glare_condition

@@ -11,6 +11,20 @@ ROUTE_MAP = {
     "통영대전선,중부선": "통영대전선/중부선",
 }
 
+
+def haversine_distance_km(lat1, lon1, lat2, lon2):
+    """두 위경도 좌표 간의 구면 대원 거리(km) 계산."""
+    R = 6371.0
+    phi1 = np.radians(lat1)
+    phi2 = np.radians(lat2)
+    delta_phi = np.radians(lat2 - lat1)
+    delta_lambda = np.radians(lon2 - lon1)
+
+    a = np.sin(delta_phi / 2.0)**2 + np.cos(phi1) * np.cos(phi2) * np.sin(delta_lambda / 2.0)**2
+    c = 2.0 * np.arctan2(np.sqrt(a), np.sqrt(1.0 - a))
+    return R * c
+
+
 def calculate_initial_compass_bearing(point_a, point_b):
     """두 위경도 좌표(lat, lon) 사이의 초기 방위각(0~360도) 계산.
     point_a: (lat1, lon1)
@@ -33,6 +47,7 @@ def calculate_initial_compass_bearing(point_a, point_b):
 def get_route_direction_map(df_line, df_acc):
     """각 노선별 '방향' 텍스트(예: 서울, 부산)가 이정 증가 방향(상행/종점방향)인지
     이정 감소 방향(하행/기점방향)인지 판별하는 딕셔너리 생성.
+    거리 계산에는 하버사인 구면 거리를 사용하여 위경도 제곱오차 왜곡을 방지.
     """
     direction_is_increasing = {}
     for acc_route, sub in df_acc.groupby("사고노선"):
@@ -43,8 +58,8 @@ def get_route_direction_map(df_line, df_acc):
 
         p_start = sub_line.iloc[0]
         p_end = sub_line.iloc[-1]
-        start_pt = (p_start["X좌표값"], p_start["Y좌표값"])
-        end_pt = (p_end["X좌표값"], p_end["Y좌표값"])
+        start_lat, start_lon = p_start["X좌표값"], p_start["Y좌표값"]
+        end_lat, end_lon = p_end["X좌표값"], p_end["Y좌표값"]
 
         # 해당 노선의 주요 방향 레이블에 대해 평균 사고 좌표의 위치 확인
         for d, d_sub in sub.groupby("방향"):
@@ -52,10 +67,13 @@ def get_route_direction_map(df_line, df_acc):
                 continue
             mean_lat = d_sub["X좌표"].mean()
             mean_lon = d_sub["Y좌표"].mean()
-            # 종점(end)에 가까운 방향이면, 해당 방향은 이정이 증가하는 방향으로 달리는 차량
-            dist_to_start = (mean_lat - start_pt[0])**2 + (mean_lon - start_pt[1])**2
-            dist_to_end = (mean_lat - end_pt[0])**2 + (mean_lon - end_pt[1])**2
-            direction_is_increasing[(acc_route, d)] = (dist_to_end < dist_to_start)
+
+            # 하버사인 구면 대원 거리로 기점·종점 근접도 계산
+            dist_to_start = haversine_distance_km(mean_lat, mean_lon, start_lat, start_lon)
+            dist_to_end = haversine_distance_km(mean_lat, mean_lon, end_lat, end_lon)
+
+            # 종점(end)에 더 가까운 방향이면 이정 증가 방향(True)
+            direction_is_increasing[(acc_route, d)] = bool(dist_to_end < dist_to_start)
 
     return direction_is_increasing
 
@@ -63,9 +81,11 @@ def get_route_direction_map(df_line, df_acc):
 def compute_road_bearing(df_acc, df_line):
     """사고 데이터의 각 행마다 도로중심선 이정좌표를 참조하여
     주행 진행 방위각(0~360도)을 산출.
+    매핑 실패 시 기본값 True 대신 np.nan을 반환하여 잠재적 왜곡 방지.
     """
     dir_map = get_route_direction_map(df_line, df_acc)
     bearings = []
+    unmapped_count = 0
 
     # 노선별 중심선 데이터 인덱싱
     line_by_route = {}
@@ -80,6 +100,13 @@ def compute_road_bearing(df_acc, df_line):
 
         sub_line = line_by_route.get(line_route)
         if sub_line is None or len(sub_line) < 2:
+            bearings.append(np.nan)
+            continue
+
+        # 방향 매핑 확인: 미확인 시 nan 처리
+        is_inc = dir_map.get((acc_route, acc_dir), None)
+        if is_inc is None:
+            unmapped_count += 1
             bearings.append(np.nan)
             continue
 
@@ -104,12 +131,16 @@ def compute_road_bearing(df_acc, df_line):
             (p2["X좌표값"], p2["Y좌표값"])
         )
 
-        is_inc = dir_map.get((acc_route, acc_dir), True)
         if is_inc:
             travel_bearing = base_bearing
         else:
             travel_bearing = (base_bearing + 180) % 360
 
         bearings.append(travel_bearing)
+
+    if unmapped_count > 0:
+        print(f"  [주의] 방향 매핑 실패 사고: {unmapped_count}건 ({unmapped_count / len(df_acc) * 100:.2f}%)")
+    else:
+        print(f"  [방향 판정 완료] 방향 매핑 성공률 100.0% (총 {len(df_acc)}건 중 실패 0건)")
 
     return np.array(bearings)
