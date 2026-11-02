@@ -51,7 +51,15 @@ GLARE(미국 블랙박스 2,157장)에는 **찍은 시각 · 위치가 없어서
 
 ## 라벨
 
-- 라벨러는 `label_sheet_blind.csv` 만 봄 (무작위 순서 · 해 위치 · 그룹 숨김). `label` 0 정상 / 1 눈부심 / 2 심한 눈부심, 애매하면 `confidence` 낮게
-- 기준은 노션 분석계획서 「모델 ② 라벨 기준표」 (불일치 67장 재검토 후 고친 판)
-- 두 사람 결과 → 카파 · 합의 라벨 → `label_set.csv` 의 해 높이 · Δ · (구름) 과 비교
+1. `label_tool.html` 을 크롬으로 열기 (더블클릭) → `data/glare_mapillary` 폴더 고르기 → 이름 적기
+2. 사진 보고 키보드 `1` 정상 · `2` 눈부심 · `3` 심한 눈부심 · `X` 제외(운전 시점 아님 · 깨짐), 애매하면 `U`
+   - 무작위 순서 · 해 위치 · 그룹은 숨김 (화면만 보고 판정). 진행은 브라우저에 자동 저장
+   - 기준은 화면 오른쪽 표 = 노션 분석계획서 「모델 ② 라벨 기준표」. **두 사람은 상의하지 않고 따로**
+3. 다 하면 `CSV 저장` → `labels_<이름>.csv` 를 `data/glare_mapillary/` 에 넣기 (사진 폴더는 각자 같은 스크립트로 받음)
+4. 두 파일이 모이면
+   ```bash
+   python notebooks/experiments/glare_video_source/compare_labels.py
+   ```
+   → 일치율 · 카파(지난번 GLARE 0.20) · 합의 라벨 `labels_merged.csv` · 다시 볼 사진 `labels_disagree.csv`
+   · 그룹(정면 / Δ 25~45° / 비교군)별 눈부심 비율 — 정면 저각도에서 눈부심이 확실히 많아야 해 위치 기준(G)이 맞는 것
 - 출처 표기: `attribution.csv` (촬영자 · Mapillary 주소, CC BY-SA 4.0)

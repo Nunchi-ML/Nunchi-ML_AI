@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>눈부심 라벨 도구</title>
+<style>
+  :root { --bg: #f6f1ea; --ink: #2b1a12; --mute: #7a6a5c; --card: #fff; --line: #e3d8ca;
+          --c0: #3ba55c; --c1: #ff8a1f; --c2: #f2522e; --cx: #8a8f96; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Noto Sans KR", system-ui, sans-serif; background: var(--bg); color: var(--ink); }
+  header { display: flex; gap: 12px; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--card); flex-wrap: wrap; }
+  header h1 { font-size: 17px; margin: 0 8px 0 0; }
+  header input[type=text] { padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; width: 120px; }
+  .bar { flex: 1; min-width: 160px; height: 8px; background: var(--line); border-radius: 4px; overflow: hidden; }
+  .bar i { display: block; height: 100%; background: var(--c0); width: 0; }
+  button { font: inherit; border: 1px solid var(--line); background: var(--card); border-radius: 8px; padding: 6px 12px; cursor: pointer; }
+  button.primary { background: var(--ink); color: #fff; border-color: var(--ink); }
+  main { display: grid; grid-template-columns: 1fr 320px; gap: 16px; padding: 16px; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+  .stage { background: #111; border-radius: 12px; display: flex; align-items: center; justify-content: center; min-height: 60vh; position: relative; }
+  .stage img { max-width: 100%; max-height: 75vh; display: block; }
+  .stage .tag { position: absolute; left: 12px; top: 12px; background: rgba(0,0,0,.6); color: #fff; padding: 4px 10px; border-radius: 6px; font-size: 13px; }
+  .keys { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 12px; }
+  .keys button { padding: 12px 6px; font-weight: 700; color: #fff; border: 0; }
+  .k0 { background: var(--c0) !important; } .k1 { background: var(--c1) !important; } .k2 { background: var(--c2) !important; } .kx { background: var(--cx) !important; }
+  .keys button.on { outline: 3px solid var(--ink); outline-offset: 2px; }
+  aside { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px; font-size: 14px; }
+  aside table { width: 100%; border-collapse: collapse; margin: 6px 0 12px; }
+  aside td { border-top: 1px solid var(--line); padding: 6px 4px; vertical-align: top; }
+  .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; }
+  .mute { color: var(--mute); font-size: 13px; }
+  .nav { display: flex; gap: 8px; margin-top: 10px; align-items: center; }
+  .pick { padding: 40px; text-align: center; }
+  label.chk { display: inline-flex; gap: 6px; align-items: center; margin-top: 10px; }
+  textarea { width: 100%; margin-top: 8px; border: 1px solid var(--line); border-radius: 6px; padding: 6px; font: inherit; }
+  kbd { border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; font-size: 12px; background: var(--bg); }
+</style>
+</head>
+<body>
+<header>
+  <h1>☀️ 눈부심 라벨</h1>
+  <span>라벨러</span><input id="who" type="text" placeholder="이름 (예: 성진)" />
+  <div class="bar"><i id="prog"></i></div>
+  <span id="count" class="mute">0 / 0</span>
+  <button id="save" class="primary">CSV 저장</button>
+</header>
+
+<div id="picker" class="pick">
+  <p><b>data/glare_mapillary</b> 폴더를 고르세요 (label_sheet_blind.csv 와 images 폴더가 들어 있는 곳)</p>
+  <input id="dir" type="file" webkitdirectory directory multiple />
+  <p class="mute">사진은 이 컴퓨터 안에서만 열려요. 진행 상황은 브라우저에 자동 저장돼서 창을 닫아도 이어서 할 수 있어요.</p>
+</div>
+
+<main id="app" hidden>
+  <section>
+    <div class="stage"><img id="img" alt="" /><span id="tag" class="tag"></span></div>
+    <div class="keys">
+      <button class="k0" data-v="0">0 정상 <kbd>1</kbd></button>
+      <button class="k1" data-v="1">1 눈부심 <kbd>2</kbd></button>
+      <button class="k2" data-v="2">2 심한 눈부심 <kbd>3</kbd></button>
+      <button class="kx" data-v="x">제외 <kbd>X</kbd></button>
+    </div>
+    <div class="nav">
+      <button id="prev">← 이전</button><button id="next">다음 →</button>
+      <button id="todo">안 한 것으로</button>
+      <label class="chk"><input id="unsure" type="checkbox" /> 애매함 <kbd>U</kbd></label>
+    </div>
+    <textarea id="note" rows="2" placeholder="메모 (선택) — 예: 흐려서 해 안 보임"></textarea>
+  </section>
+  <aside>
+    <b>판정 기준표</b> <span class="mute">(노션 분석계획서 「모델 ② 라벨 기준표」)</span>
+    <table>
+      <tr><td><span class="dot" style="background:var(--c0)"></span><b>0 정상</b></td><td>해가 화면에 없고, 도로 · 차선 · 신호가 다 보인다 <span class="mute">(흐린 날, 해가 옆 · 뒤)</span></td></tr>
+      <tr><td><span class="dot" style="background:var(--c1)"></span><b>1 눈부심</b></td><td>해나 강한 역광이 보이지만, 도로 · 차선 · 신호는 읽힌다 <span class="mute">(해가 화면 위쪽, 하늘만 하얌)</span></td></tr>
+      <tr><td><span class="dot" style="background:var(--c2)"></span><b>2 심한 눈부심</b></td><td>해가 신호 · 표지판 · 도로 바로 위에 있거나, 하얗게 번져 일부가 안 보인다</td></tr>
+      <tr><td><span class="dot" style="background:var(--cx)"></span><b>제외</b></td><td>운전 시점이 아님(인도 · 차 안 아님), 사진이 깨짐 · 너무 흐림</td></tr>
+    </table>
+    <ul class="mute" style="padding-left:18px;margin:0">
+      <li>두 사람은 <b>서로 상의하지 않고</b> 따로 붙여요</li>
+      <li>애매하면 <b>더 약한 쪽</b>, 단 도로 · 차선 · 앞차 · 표지판 중 하나라도 실제로 안 보이면 2</li>
+      <li>해 위치 · 시각은 일부러 숨겨 뒀어요 (화면만 보고 판정)</li>
+    </ul>
+    <p class="mute" style="margin-top:14px">단축키: <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> 판정 · <kbd>X</kbd> 제외 · <kbd>U</kbd> 애매 · <kbd>←</kbd><kbd>→</kbd> 이동</p>
+  </aside>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let rows = [], files = new Map(), i = 0, labels = {};
+const KEY = "nunchi-glare-labels";
+
+function loadState() { try { labels = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch { labels = {}; } }
+function saveState() { try { localStorage.setItem(KEY, JSON.stringify(labels)); } catch {} }
+
+function parseCSV(text) {
+  const lines = text.replace(/^﻿/, "").split(/\r?\n/).filter(Boolean);
+  const head = lines[0].split(",");
+  return lines.slice(1).map((l) => { const v = l.split(","); return Object.fromEntries(head.map((h, k) => [h, v[k] ?? ""])); });
+}
+
+$("dir").addEventListener("change", async (e) => {
+  for (const f of e.target.files) {
+    const rel = f.webkitRelativePath.split("/").slice(1).join("/");   // 고른 폴더 이름 뺀 경로
+    files.set(rel, f);
+  }
+  const sheet = files.get("label_sheet_blind.csv");
+  if (!sheet) { alert("label_sheet_blind.csv 가 없어요. data/glare_mapillary 폴더를 골랐는지 확인해 주세요."); return; }
+  rows = parseCSV(await sheet.text());
+  loadState();
+  try { $("who").value = localStorage.getItem(KEY + "-who") || ""; } catch {}
+  i = Math.max(0, rows.findIndex((r) => !labels[r.id]));
+  if (i < 0) i = 0;
+  $("picker").hidden = true; $("app").hidden = false;
+  show();
+});
+
+let url = null;
+function show() {
+  const r = rows[i]; if (!r) return;
+  const f = files.get(r.file);
+  if (url) URL.revokeObjectURL(url);
+  url = f ? URL.createObjectURL(f) : "";
+  $("img").src = url; $("img").alt = f ? r.file : "사진 파일 없음";
+  const L = labels[r.id] || {};
+  $("tag").textContent = `#${r.no}` + (f ? "" : " · 파일 없음");
+  document.querySelectorAll(".keys button").forEach((b) => b.classList.toggle("on", b.dataset.v === L.label));
+  $("unsure").checked = !!L.unsure; $("note").value = L.note || "";
+  const done = rows.filter((x) => labels[x.id]?.label).length;
+  $("count").textContent = `${done} / ${rows.length}`;
+  $("prog").style.width = (100 * done / rows.length) + "%";
+}
+
+function setLabel(v) {
+  const r = rows[i]; labels[r.id] = { ...(labels[r.id] || {}), label: v, note: $("note").value, unsure: $("unsure").checked };
+  saveState(); if (i < rows.length - 1) i++; show();
+}
+document.querySelectorAll(".keys button").forEach((b) => b.addEventListener("click", () => setLabel(b.dataset.v)));
+$("prev").onclick = () => { if (i > 0) { i--; show(); } };
+$("next").onclick = () => { if (i < rows.length - 1) { i++; show(); } };
+$("todo").onclick = () => { const k = rows.findIndex((r) => !labels[r.id]?.label); if (k >= 0) { i = k; show(); } else alert("다 했어요!"); };
+$("unsure").onchange = () => { const r = rows[i]; labels[r.id] = { ...(labels[r.id] || {}), unsure: $("unsure").checked }; saveState(); };
+$("note").oninput = () => { const r = rows[i]; labels[r.id] = { ...(labels[r.id] || {}), note: $("note").value }; saveState(); };
+$("who").oninput = () => { try { localStorage.setItem(KEY + "-who", $("who").value); } catch {} };
+
+document.addEventListener("keydown", (e) => {
+  if ($("app").hidden || e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT" && e.target.type === "text") return;
+  const k = e.key.toLowerCase();
+  if (k === "1") setLabel("0"); else if (k === "2") setLabel("1"); else if (k === "3") setLabel("2");
+  else if (k === "x") setLabel("x");
+  else if (k === "u") { $("unsure").checked = !$("unsure").checked; $("unsure").onchange(); }
+  else if (k === "arrowleft") $("prev").onclick(); else if (k === "arrowright") $("next").onclick();
+});
+
+$("save").onclick = () => {
+  const who = ($("who").value || "").trim();
+  if (!who) { alert("라벨러 이름을 먼저 적어 주세요."); $("who").focus(); return; }
+  const esc = (s) => `"${String(s ?? "").replace(/"/g, '""')}"`;
+  const out = ["no,id,file,sequence,label,unsure,note,labeler"].concat(rows.map((r) => {
+    const L = labels[r.id] || {};
+    return [r.no, r.id, r.file, r.sequence, L.label ?? "", L.unsure ? 1 : 0, esc(L.note), esc(who)].join(",");
+  })).join("\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob(["﻿" + out], { type: "text/csv" }));
+  a.download = `labels_${who}.csv`; a.click();
+};
+</script>
+</body>
+</html>
