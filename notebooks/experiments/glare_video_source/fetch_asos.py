@@ -5,6 +5,8 @@
     dc10Tca  전운량 (0 맑음 ~ 10 흐림)
     ss       일조 (그 정시까지 한 시간 동안 해가 비친 시간, 0~1)
     icsr     일사 (MJ/m², 그 한 시간)
+    vs       시정 (10 m 단위 — 안개 · 미세먼지로 빛이 퍼지는 정도)
+    rn       강수 (mm, 빈칸 = 0 — 젖은 도로 반사)
 
     python notebooks/experiments/glare_video_source/fetch_asos.py
 결과: data/asos/daegu_143.csv (날짜별로 받아 쌓음 — 이미 받은 날은 다시 안 물음)
@@ -20,7 +22,7 @@ import find_sun_frames as F
 
 API = "https://apis.data.go.kr/1360000/AsosHourlyInfoService/getWthrDataList"
 CACHE = F.ROOT / "data" / "asos" / "daegu_143.csv"
-COLS = {"dc10Tca": "cloud", "ss": "sunshine", "icsr": "radiation"}
+COLS = {"dc10Tca": "cloud", "ss": "sunshine", "icsr": "radiation", "vs": "visibility", "rn": "rain"}
 
 
 def key():
@@ -46,6 +48,8 @@ def fetch_day(day, k):
 
 def ensure(days):
     have = pd.read_csv(CACHE) if CACHE.exists() else pd.DataFrame(columns=["tm", *COLS.values()])
+    if not set(COLS.values()) <= set(have.columns):                  # 받는 칸이 늘면 처음부터 다시
+        have = pd.DataFrame(columns=["tm", *COLS.values()])
     got = set(have.tm.str[:10].str.replace("-", ""))
     todo = sorted(set(days) - got)
     k = key()
@@ -66,6 +70,7 @@ def attach(d, time_col="captured_at_kst"):
     for c in COLS.values():
         a[c] = pd.to_numeric(a[c], errors="coerce")
     a.loc[a.index.hour.isin(range(7, 19)), "sunshine"] = a.sunshine.fillna(0)   # 낮에 일조 빈칸 = 해 안 남
+    a["rain"] = a.rain.fillna(0)                                                  # 강수 빈칸 = 비 안 옴
     hour = t.dt.round("h")
     return d.assign(**{c: hour.map(a[c]).to_numpy() for c in COLS.values()})
 
