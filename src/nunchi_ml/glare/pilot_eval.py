@@ -43,6 +43,20 @@ def cross_val(d, fit_predict, n_splits=5):
     return pred
 
 
+def repeated_cross_val(d, fit_predict, n_splits=5, repeats=30):
+    """영상 단위 분할을 repeats 번 다르게 섞어 macro F1 · 심한 눈부심 재현율 목록을 돌려준다.
+    영상이 33개뿐이라 분할 한 번의 점수는 운에 크게 흔들림 (같은 데이터 · 모델이 0.44 ~ 0.57)."""
+    y = d.label.values
+    f1s, severe = [], []
+    for r in range(repeats):
+        pred = np.zeros_like(y)
+        for tr, te in GroupKFold(n_splits=n_splits, shuffle=True, random_state=r).split(d, y, d.vid):
+            pred[te] = fit_predict(d.iloc[tr], d.iloc[te])
+        f1s.append(f1_score(y, pred, average="macro"))
+        severe.append(recall_score(y, pred, labels=[2], average="macro"))
+    return np.array(f1s), np.array(severe)
+
+
 def brightness_rule(feature):
     """숫자 하나에 임계값 두 개를 두는 규칙. 임계값은 학습 폴드에서 macro F1이 가장 높은 값."""
     def fit_predict(tr, te):
@@ -76,6 +90,9 @@ def main(features_csv, labels_csv):
               f" · 심한 눈부심 재현율 {recall_score(y, p, labels=[2], average='macro'):.2f}")
         if name == "LightGBM":
             print("혼동행렬 (행 = 정답 정상/눈부심/심한):\n", confusion_matrix(y, p))
+            f1s, sev = repeated_cross_val(d, fn)
+            print(f"  분할 30번 반복: macro F1 평균 {f1s.mean():.2f} ± {f1s.std():.2f} (범위 {f1s.min():.2f}~{f1s.max():.2f})"
+                  f" · 심한 눈부심 재현율 평균 {sev.mean():.2f} ± {sev.std():.2f}")
     m = lightgbm_model().fit(d[FEATURES], y)
     imp = pd.Series(m.booster_.feature_importance("gain"), index=FEATURES)
     print("중요 변수 (gain):", (imp / imp.sum()).sort_values(ascending=False).head(5).round(2).to_dict())
