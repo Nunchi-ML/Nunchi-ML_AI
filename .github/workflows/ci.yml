@@ -1,0 +1,25 @@
+# 공통 코드 검사: PR · main 에서 nunchi_ml 패키지를 설치하고 테스트를 돌림.
+# BE 가 이 패키지(wheel)로 예측하므로, 깨진 채 배포 묶음이 나가지 않게 막는 용도.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+          cache: pip
+      - name: 패키지 설치
+        run: pip install -e ".[test]"
+      - name: 테스트
+        run: pytest -q

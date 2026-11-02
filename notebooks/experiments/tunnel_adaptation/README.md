@@ -10,7 +10,7 @@
 |---|---|
 | 사고 · 터널 데이터 정리 (01 · 02) | 실데이터로 실행 완료 |
 | 도로망 · 사고 올리기 (03), 기상 (04), 분석표 (05), 경로 지점 (06) | 코드 완료, 원본 파일(OSM zip · 관측소 목록) 받은 뒤 실행 |
-| A 점수 계산식 | 초안, 검토 · 업데이트 중 (`src/tunnel/adaptation.py`) |
+| A 점수 계산식 | 초안, 검토 · 업데이트 중 (`src/nunchi_ml/tunnel/adaptation.py`) |
 | 모델 학습 · 결과 | 다음 단계 |
 
 ## 데이터
@@ -56,7 +56,7 @@
 
 ```bash
 pip install -r requirements.txt
-python -m src.tunnel.adaptation 3.0 1.0 0.3      # A 점수 예시
+python -m nunchi_ml.tunnel.adaptation 3.0 1.0 0.3      # A 점수 예시
 ```
 
 노트북은 `01` → `06` 순서로 실행한다. 노트북 폴더 아래 `data/1_원본`(받은 그대로) · `data/2_중간` · `data/3_결과`를 만들고, `.env`에 `DATA_GO_KR_KEY=인증키`를 넣는다 (공유 금지).
