@@ -41,6 +41,10 @@ def main():
         sys.exit(f"라벨 파일 2개가 필요해요 (찾은 것: {paths})")
     (a, wa), (b, wb) = load(paths[0]), load(paths[1])
     d = pd.read_csv(OUT / "label_set.csv").merge(a, on="id").merge(b, on="id")
+    view = pd.read_csv(Path(__file__).parent / "sequence_view.csv")[["sequence", "view"]]
+    d = d.merge(view, on="sequence", how="left")
+    print(f"인도 · 애매 시점 묶음 {int((~d.view.isin(['dashcam', 'road'])).sum())}장 제외 (sequence_view.csv)")
+    d = d[d.view.isin(["dashcam", "road"])].reset_index(drop=True)
     la, lb = d[f"label_{wa}"], d[f"label_{wb}"]
 
     excl = (la == "x") | (lb == "x")
@@ -65,11 +69,14 @@ def main():
     # 해 위치와 관계 (합의된 0/1/2 만)
     g = d[d.label.isin(["0", "1", "2"])].assign(glare=lambda t: t.label.astype(int) >= 1)
     if len(g):
-        print("\n그룹별 눈부심(1 이상) 비율 — 정면 저각도일수록 높아야 해 위치 기준이 맞는 것")
-        print(g.groupby("group").glare.agg(["count", "mean"]).rename(columns={"count": "사진", "mean": "눈부심 비율"}).round(2).to_string())
-        g["Δ구간"] = pd.cut(g.gap, [0, 25, 45, 90, 180], include_lowest=True)
-        print("\n해 높이 0~25° 사진의 Δ 구간별 눈부심 비율")
-        print(g[g.sun_alt <= 25].groupby("Δ구간", observed=True).glare.agg(["count", "mean"]).round(2).to_string())
+        g["severe"] = g.label.astype(int) == 2
+        agg = dict(사진=("glare", "size"), 눈부심=("glare", "mean"), 심함=("severe", "mean"))
+        print("\n합의 라벨 · 정면 저각도(fix_metadata.py 보정 후)별")
+        print(g.groupby("front_low").agg(**agg).round(2).to_string())
+        print("\n시점별"); print(g.groupby("view").agg(**agg).round(2).to_string())
+        low = g[(g.sun_alt <= 25) & ~g.get("heading_suspect", False)]
+        print("\n해 높이 0~25° · Δ 구간별 (방향 의심 제외)")
+        print(low.groupby(pd.cut(low.gap, [0, 25, 45, 90, 180], include_lowest=True), observed=True).agg(**agg).round(2).to_string())
 
 
 if __name__ == "__main__":
