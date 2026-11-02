@@ -46,10 +46,11 @@ def main():
     d.to_csv(OUT / "labels_drive.csv", index=False, encoding="utf-8-sig")
     print(f"운전 시점 {len(d)}장 (묶음 {d.sequence.nunique()}개) · 라벨 {d.label.value_counts().sort_index().to_dict()} → labels_drive.csv")
 
-    print("\n그룹별 (front 정면 저각도 · near Δ 25~45° · other 비교군)"); print(rate(d, "group").to_string())
+    print("\n시점별"); print(rate(d, "view").to_string())
+    print("\n정면 저각도 (fix_metadata.py 보정 후)"); print(rate(d, "front_low").to_string())
     print("\n해 높이별"); print(rate(d, pd.cut(d.sun_alt, [0, 10, 25, 90]).rename("해 높이")).to_string())
-    print("\nΔ 별 (해 높이 0~25°)")
-    low = d[d.sun_alt <= 25]
+    print("\nΔ 별 (해 높이 0~25° · 방향 의심 사진 제외)")
+    low = d[(d.sun_alt <= 25) & ~d.get("heading_suspect", False)]
     print(rate(low, pd.cut(low.gap, [0, 25, 45, 90, 180], include_lowest=True).rename("Δ")).to_string())
     r = pd.Series({c: spearmanr(d[c], d.label)[0] for c in FEATURES + ["sun_alt", "gap"]})
     print("\n라벨과 순위 상관 (|r| 큰 순)"); print(r.sort_values(key=abs, ascending=False).round(2).to_string())

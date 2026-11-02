@@ -51,7 +51,7 @@ def main():
 
     d = d.merge(ck[["sequence", "offset_h"]], on="sequence", how="left")
     ok = d.offset_h.notna()
-    t = (utc - pd.to_timedelta(d.offset_h.fillna(0).abs(), unit="h")).dt.tz_convert("Asia/Seoul")
+    t = (utc + pd.to_timedelta(d.offset_h.fillna(0), unit="h")).dt.tz_convert("Asia/Seoul")   # offset_h 는 부호 그대로 (−9 · +9)
     pos = sun_position(t, d.lat, d.lon)
     d["captured_at_kst"] = t.dt.strftime("%Y-%m-%d %H:%M:%S")
     d["sun_alt"], d["sun_az"] = pos.altitude.round(2).to_numpy(), pos.azimuth.round(2).to_numpy()
