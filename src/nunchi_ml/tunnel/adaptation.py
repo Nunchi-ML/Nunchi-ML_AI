@@ -13,7 +13,7 @@
     A     = log10(L20 ÷ 터널 안 휘도) ÷ 2, 0~1로 자름 (휘도비 100배 = 1)
 
 사용:
-    python -m src.tunnel.adaptation 3.0        # 일사량 3.0 MJ/m² 예시 출력
+    python -m nunchi_ml.tunnel.adaptation 3.0        # 일사량 3.0 MJ/m² 예시 출력
 """
 import sys
 

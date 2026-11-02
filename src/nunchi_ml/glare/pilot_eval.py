@@ -1,7 +1,7 @@
 """시범 라벨로 '밝기 규칙' 기준선과 LightGBM을 영상 단위 교차검증으로 비교한다.
 
 사용:
-    python -m src.glare.pilot_eval data/glare_features.csv data/glare_pilot_labels.csv
+    python -m nunchi_ml.glare.pilot_eval data/glare_features.csv data/glare_pilot_labels.csv
 
 라벨 파일 칸: vid, file, label (0 정상 / 1 눈부심 / 2 심한 눈부심)
 """

@@ -52,8 +52,8 @@
 
 ```bash
 pip install -r requirements.txt
-python -m src.glare.features data/glare data/glare_features.csv
-python -m src.glare.pilot_eval data/glare_features.csv data/glare_pilot_labels.csv
+python -m nunchi_ml.glare.features data/glare data/glare_features.csv
+python -m nunchi_ml.glare.pilot_eval data/glare_features.csv data/glare_pilot_labels.csv
 ```
 
 `data/glare`에 GLARE의 `Images` 폴더를 그대로 둔다.

@@ -14,11 +14,11 @@ from .inference import GlarePredictor, sha256
 def bundle(directory, output):
     directory, output = Path(directory), Path(output)
     predictor = GlarePredictor(directory)
-    wheels = list(directory.glob("nunchi_glare-*-py3-none-any.whl"))
+    wheels = list(directory.glob("nunchi_ml-*-py3-none-any.whl"))
     if len(wheels) != 1:
-        raise ValueError("Exactly one nunchi-glare wheel is required")
+        raise ValueError("Exactly one nunchi-ml wheel is required")
     with zipfile.ZipFile(wheels[0]) as wheel:
-        features_hash = hashlib.sha256(wheel.read("nunchi_glare/features.py")).hexdigest()
+        features_hash = hashlib.sha256(wheel.read("nunchi_ml/glare/features.py")).hexdigest()
     if features_hash != predictor.meta["features_sha256"]:
         raise ValueError("Wheel preprocessing differs from exported model")
     references = json.loads((directory / "reference/expected.json").read_text(encoding="utf-8"))

@@ -1,6 +1,6 @@
 """재현 가능한 시범 모델·메타데이터·전송 기준 JPEG 3장을 export한다.
 
-python -m src.glare.export_model --images ../../data/glare --features ../../data/glare/pilot_glare/glare_features.csv --labels ../../data/glare/pilot_glare/pilot_labels.csv --out models/model2-pilot-v1
+python -m nunchi_ml.glare.export_model --images ../../data/glare --features ../../data/glare/pilot_glare/glare_features.csv --labels ../../data/glare/pilot_glare/pilot_labels.csv --out models/model2-pilot-v1
 """
 import argparse
 from collections import Counter
