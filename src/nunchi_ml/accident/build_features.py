@@ -11,8 +11,8 @@ import pandas as pd
 
 sys.stdout.reconfigure(encoding="utf-8")
 
-from src.accident.bearing import compute_road_bearing
-from src.accident.solar import compute_solar_positions, compute_relative_angle, classify_glare_condition
+from nunchi_ml.accident.bearing import compute_road_bearing
+from nunchi_ml.accident.solar import compute_solar_positions, compute_relative_angle, classify_glare_condition
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "data")
 ACC_PATH = os.path.join(DATA_DIR, "expressway", "한국도로공사_사고이정별좌표및기상_2023-2025.csv")

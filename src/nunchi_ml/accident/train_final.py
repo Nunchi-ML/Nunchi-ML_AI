@@ -20,12 +20,13 @@ from sklearn.pipeline import make_pipeline
 from sklearn.linear_model import PoissonRegressor
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_poisson_deviance, mean_absolute_error
+from pathlib import Path
 import lightgbm as lgb
 
 sys.stdout.reconfigure(encoding="utf-8")
 
 SEED = 42
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+BASE_DIR = str(Path(__file__).resolve().parents[3])
 SEG_PATH = os.path.join(BASE_DIR, "data", "expressway", "segment_1km_dataset_v1.csv")
 MODEL_DIR = os.path.join(BASE_DIR, "models")
 OUTPUT_MODEL_PATH = os.path.join(MODEL_DIR, "model1-v1.joblib")

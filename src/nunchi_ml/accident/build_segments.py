@@ -12,11 +12,12 @@ import numpy as np
 import pandas as pd
 import pvlib
 
-from src.accident.bearing import ROUTE_MAP, calculate_initial_compass_bearing
+from pathlib import Path
+from nunchi_ml.accident.bearing import ROUTE_MAP, calculate_initial_compass_bearing
 
 sys.stdout.reconfigure(encoding="utf-8")
 
-DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "data")
+DATA_DIR = str(Path(__file__).resolve().parents[3] / "data")
 LINE_PATH = os.path.join(DATA_DIR, "expressway", "한국도로공사_도로중심선_이정좌표.csv")
 ACC_PATH = os.path.join(DATA_DIR, "expressway", "accident_with_solar_features.csv")
 TUNNEL_PATH = os.path.join(DATA_DIR, "tunnel", "국토교통부_전국도로터널정보표준데이터.csv")

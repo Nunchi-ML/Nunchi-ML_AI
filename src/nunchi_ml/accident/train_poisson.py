@@ -15,12 +15,13 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import make_pipeline
 from sklearn.linear_model import PoissonRegressor
 from sklearn.metrics import mean_poisson_deviance, mean_absolute_error
+from pathlib import Path
 import lightgbm as lgb
 
 sys.stdout.reconfigure(encoding="utf-8")
 
 SEED = 0
-DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "data")
+DATA_DIR = str(Path(__file__).resolve().parents[3] / "data")
 SEG_PATH = os.path.join(DATA_DIR, "expressway", "segment_1km_dataset_v1.csv")
 FOLDS_PATH = os.path.join(DATA_DIR, "expressway", "folds_model1_v1.csv")
 

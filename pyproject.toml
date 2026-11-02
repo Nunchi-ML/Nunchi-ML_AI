@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "nunchi-ml"
 version = "0.2.0"
-description = "눈치 모델 공통 코드: 모델② 눈부심 전처리 · 추론, 모델③ 터널 순응 점수"
+description = "눈치 모델 공통 코드: 모델① 사고위험, 모델② 눈부심 전처리 · 추론, 모델③ 터널 순응 점수"
 requires-python = ">=3.11"
 dependencies = [
   "numpy>=2.1,<3", "pandas>=3,<4", "opencv-python-headless>=5,<6",
@@ -22,3 +22,4 @@ include = ["nunchi_ml*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["src"]
