@@ -35,10 +35,8 @@ def pick(d):
     return pd.concat([front, near, other])
 
 
-def main():
-    tok = F.token()
-    sel = pick(pd.read_csv(OUT / "candidates.csv"))
-    (OUT / "images").mkdir(parents=True, exist_ok=True)
+def fetch(sel, tok):
+    """sel 의 사진을 images/<묶음>/<id>.jpg 로 받고 (이미 있으면 건너뜀) id · file · creator 표를 돌려준다."""
     meta = []
     for n, r in enumerate(sel.itertuples(), 1):
         path = OUT / "images" / str(r.sequence) / f"{r.id}.jpg"
@@ -58,8 +56,13 @@ def main():
         if n % 50 == 0 or n == len(sel):
             print(f"  {n}/{len(sel)}", flush=True)
         time.sleep(0.1)
-    m = pd.DataFrame(meta)
-    sel = sel.merge(m, on="id")
+    return pd.DataFrame(meta)
+
+
+def main():
+    tok = F.token()
+    sel = pick(pd.read_csv(OUT / "candidates.csv"))
+    sel = sel.merge(fetch(sel, tok), on="id")
     sel = sel[sel.file.notna()]
     cols = ["id", "file", "group", "sequence", "captured_at_kst", "lat", "lon", "heading", "sun_alt", "sun_az", "gap", "front_low"]
     sel[cols].to_csv(OUT / "label_set.csv", index=False, encoding="utf-8-sig")
