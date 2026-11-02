@@ -22,7 +22,8 @@ import requests
 from nunchi_ml.sun import heading_gap, is_front_low, sun_position
 
 ROOT = Path(__file__).resolve().parents[3]
-OUT = ROOT / "data" / "glare_mapillary"
+# 도로마다 결과 폴더를 나눔: GLARE_SET=glare_mapillary_sincheon 이면 data/glare_mapillary_sincheon/ (기본은 달구벌대로)
+OUT = ROOT / "data" / os.getenv("GLARE_SET", "glare_mapillary")
 API = "https://graph.mapillary.com/images"
 FIELDS = "id,captured_at,compass_angle,computed_compass_angle,geometry,computed_geometry,camera_type,sequence,make,model"
 TILE = 0.009                     # Mapillary bbox 검색은 0.01° 보다 작아야 함
@@ -39,15 +40,17 @@ def token():
 
 
 def load_route(path):
-    """FE dalgu.json({"poly": [[lon, lat], ...]}) 또는 [[lon, lat], ...] 목록"""
+    """도로선 목록 [[[lon, lat], ...], ...]. FE dalgu.json({"poly": [...]}) · fetch_road.py 결과({"lines": [...]}) · 선 하나 [[lon, lat], ...]"""
     d = json.loads(Path(path).read_text(encoding="utf-8"))
-    return np.asarray(d["poly"] if isinstance(d, dict) else d, float)
+    if isinstance(d, dict) and "lines" in d:
+        return [np.asarray(l, float) for l in d["lines"] if len(l) >= 2]
+    return [np.asarray(d["poly"] if isinstance(d, dict) else d, float)]
 
 
-def tiles_along(route, buffer_deg=0.002):
+def tiles_along(lines, buffer_deg=0.002):
     """도로선이 지나는 0.009° 칸만 (도로에서 먼 칸은 안 물음)"""
     keys = set()
-    for (x0, y0), (x1, y1) in zip(route, route[1:]):
+    for (x0, y0), (x1, y1) in ((a, b) for route in lines for a, b in zip(route, route[1:])):
         n = max(1, int(math.hypot(x1 - x0, y1 - y0) / (TILE / 3)))
         for t in np.linspace(0, 1, n + 1):
             x, y = x0 + (x1 - x0) * t, y0 + (y1 - y0) * t
@@ -79,16 +82,18 @@ def search(box, tok, cache, depth=0):
     return data
 
 
-def dist_to_route_m(lon, lat, route):
-    """사진 위치 → 도로선까지 거리(m), 가까운 근사"""
-    k = 111320 * math.cos(math.radians(route[:, 1].mean()))
-    px, py = (np.asarray(lon) - route[0, 0]) * k, (np.asarray(lat) - route[0, 1]) * 110940
-    rx, ry = (route[:, 0] - route[0, 0]) * k, (route[:, 1] - route[0, 1]) * 110940
+def dist_to_route_m(lon, lat, lines):
+    """사진 위치 → 가장 가까운 도로선까지 거리(m), 가까운 근사"""
+    o = lines[0][0]
+    k = 111320 * math.cos(math.radians(o[1]))
+    px, py = (np.asarray(lon) - o[0]) * k, (np.asarray(lat) - o[1]) * 110940
     best = np.full(len(px), np.inf)
-    for (ax, ay), (bx, by) in zip(zip(rx, ry), zip(rx[1:], ry[1:])):
-        dx, dy = bx - ax, by - ay; L = dx * dx + dy * dy or 1e-9
-        t = np.clip(((px - ax) * dx + (py - ay) * dy) / L, 0, 1)
-        best = np.minimum(best, np.hypot(px - ax - dx * t, py - ay - dy * t))
+    for route in lines:
+        rx, ry = (route[:, 0] - o[0]) * k, (route[:, 1] - o[1]) * 110940
+        for (ax, ay), (bx, by) in zip(zip(rx, ry), zip(rx[1:], ry[1:])):
+            dx, dy = bx - ax, by - ay; L = dx * dx + dy * dy or 1e-9
+            t = np.clip(((px - ax) * dx + (py - ay) * dy) / L, 0, 1)
+            best = np.minimum(best, np.hypot(px - ax - dx * t, py - ay - dy * t))
     return best
 
 

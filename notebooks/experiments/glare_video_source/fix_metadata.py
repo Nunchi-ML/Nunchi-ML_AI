@@ -54,6 +54,8 @@ def main():
     c["heading_suspect"] = np.nan_to_num(np.asarray(heading_gap(c.heading, c.track), float)) > HEADING_TOL
     keep = ["offset_h", "captured_at_ms", "clock_ok", "track", "heading_suspect"]
     for name in ("candidates.csv", "label_set.csv", "dashcam_set.csv"):
+        if not (OUT / name).exists():                                 # 새 도로 폴더엔 라벨 세트가 아직 없음
+            continue
         d = c if name == "candidates.csv" else pd.read_csv(OUT / name)
         d = d[[k for k in d.columns if k not in keep]].merge(c[["id"] + keep], on="id", how="left")
         t = (pd.to_datetime(d.captured_at_ms, unit="ms", utc=True)

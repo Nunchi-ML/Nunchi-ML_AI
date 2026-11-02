@@ -38,14 +38,15 @@ def main():
     for seq, g in d.groupby("sequence"):
         i = g.index[len(g) // 2]
         b = thumb_brightness(d.at[i, "id"], tok); time.sleep(0.2)
-        alt0 = sun_position(utc[[i]].dt.tz_convert("Asia/Seoul"), d.at[i, "lat"], d.at[i, "lon"]).altitude.iloc[0]
-        alt9 = sun_position((utc[[i]] - pd.Timedelta(hours=9)).dt.tz_convert("Asia/Seoul"), d.at[i, "lat"], d.at[i, "lon"]).altitude.iloc[0]
-        if b >= BRIGHT:   offset = 0 if alt0 > 0 else (-9 if alt9 > 0 else None)   # 낮 사진: 해가 떠 있는 쪽
-        elif b <= DARK:   offset = 0 if alt0 <= 0 else (-9 if alt9 <= 0 else None)  # 밤 사진: 해가 진 쪽
-        else:             offset = None                                             # 애매 (흐림 · 해 질 녘) → 쓰지 않음
+        alt = {o: sun_position((utc[[i]] + pd.Timedelta(hours=o)).dt.tz_convert("Asia/Seoul"),
+                               d.at[i, "lat"], d.at[i, "lon"]).altitude.iloc[0] for o in (0, -9, 9)}
+        # 낮 사진이면 해가 떠 있는 후보, 밤 사진이면 진 후보 중 앞 순서(0 → −9 → +9). 애매한 밝기(흐림 · 해 질 녘)는 쓰지 않음
+        ok = [o for o in (0, -9, 9) if (alt[o] > 0 if b >= BRIGHT else alt[o] <= 0)] if (b >= BRIGHT or b <= DARK) else []
+        offset = ok[0] if ok else None
         rows.append({"sequence": seq, "photos": len(g), "sample_id": d.at[i, "id"], "brightness": round(b, 1),
-                     "alt_as_recorded": round(alt0, 1), "alt_minus9h": round(alt9, 1), "offset_h": offset})
-        print(f"  {seq[:10]}… 사진 {len(g):4d} 밝기 {b:5.1f} 해높이 기록 {alt0:6.1f}° / -9h {alt9:6.1f}° → {offset}", flush=True)
+                     "alt_as_recorded": round(alt[0], 1), "alt_minus9h": round(alt[-9], 1), "alt_plus9h": round(alt[9], 1),
+                     "offset_h": offset})
+        print(f"  {seq[:10]}… 사진 {len(g):4d} 밝기 {b:5.1f} 해높이 기록 {alt[0]:6.1f}° / -9h {alt[-9]:6.1f}° / +9h {alt[9]:6.1f}° → {offset}", flush=True)
     ck = pd.DataFrame(rows)
     ck.to_csv(OUT / "clock_check.csv", index=False, encoding="utf-8-sig")
 
