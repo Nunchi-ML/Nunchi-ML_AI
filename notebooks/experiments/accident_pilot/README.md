@@ -14,10 +14,17 @@
 | **기준선 1**: GLM 기본 (도로·터널) | 0.1434 (±0.0385) | 0.0337 (±0.0045) | 1.0480 | 4.0% | 태양 변수 제외 |
 | **실험 1-A**: GLM (+태양 변수) | 0.1421 (±0.0382) | 0.0337 (±0.0046) | 1.0473 | 14.1% | 포착률 2배 향상 |
 | **실험 1-B**: LightGBM 기본 (도로·터널) | 0.1439 (±0.0379) | 0.0333 (±0.0043) | 1.0479 | 6.1% | 비선형 구조 학습 |
-| **실험 1-C**: **LightGBM (+태양 변수)** | **0.1312 (±0.0377)** | **0.0335 (±0.0074)** | **1.0384** | **12.1%** | **Deviance 8.5% 감소 (최우수)** |
+| **실험 1-C**: LightGBM 기본 (+태양 변수) | 0.1312 (±0.0377) | 0.0335 (±0.0074) | 1.0384 | 12.1% | Deviance 8.5% 감소 |
+| **실험 1-D**: Random Forest (+태양 변수) | 0.1368 (±0.0434) | 0.0342 (±0.0045) | 1.0419 | 16.2% | 포착률 개선, 오차 열위 |
+| **실험 1-E (최종)**: **LightGBM 튜닝 (+태양·교호작용)** | **0.1299 (±0.0379)** | **0.0335 (±0.0049)** | **1.0372** | **16.2%** | **튜닝 효과 미미 (0.1312 → 0.1299), 최종 선정** |
+| **실험 1-F**: 앙상블 B (LGBM+RF+GLM) | 0.1296 (±0.0384) | 0.0336 (±0.0048) | 1.0375 | 16.2% | 단일 대비 이득 미미(-0.0003)·MAE 악화 |
 
-- **Q2 연구 질문 검증**: 연간 태양 정면 노출 시간(`annual_glare_hours_fwd`, `ew_alignment`, `commute_glare_hours`)을 추가했을 때, Poisson Deviance가 **0.1433 → 0.1312 (-8.5%)**로 뚜렷하게 감소했다.
-- **위험 구간 탐지 능력 대폭 개선**: 모델 예측치 상위 10% 구간의 실제 정면 태양 사고 포착률(Capture Rate)이 기준선 대비 **7.1% → 12.1%**로 1.7배 향상되었다.
+- **Q2 연구 질문 검증**: 연간 태양 정면 노출 시간(`annual_glare_hours_fwd`, `ew_alignment`, `commute_glare_hours`)을 추가했을 때, Poisson Deviance가 **0.1433 → 0.1312 (-8.5%)**로 감소했다.
+- **튜닝 효과 및 최종 모델 선정**: 24개 조합 그리드 탐색 결과 **튜닝 효과 미미 (0.1312 → 0.1299, 동일 5겹 탐색 점수)** 수준이었으며, 앙상블 또한 단일 모델 대비 실익이 없어 해석력·배포 단순성이 우수한 **단일 LightGBM(Poisson)**을 최종 모델(`models/model1-v1.joblib`)로 선정했다.
+- **위험 등급 기준 (전체 5,782개 구간 예측값 분포 기준)**:
+  - `0.025` 미만: **SAFE** (하위 75%)
+  - `0.025` 이상 ~ `0.035` 미만: **WARNING** (상위 25% 주의 구간)
+  - `0.035` 이상: **DANGER** (상위 10% 고위험 구간, 실제 정면 태양 사고의 **16.2%** 포착)
 - **LightGBM 변수 중요도 (Gain 비율)**:
   1. `annual_glare_hours_fwd` (순방향 연간 정면태양 노출 시간): **59.8%**
   2. `ew_alignment` (동서 방향성 지수): **17.5%**
@@ -75,7 +82,10 @@
 
 ```bash
 pip install -r requirements.txt
-python -m src.accident.build_features
-python -m src.accident.build_segments
-python -m src.accident.train_poisson
+pip install -e ".[test]"
+python -m nunchi_ml.accident.build_features
+python -m nunchi_ml.accident.build_segments
+python -m nunchi_ml.accident.train_poisson
+python -m nunchi_ml.accident.train_final
+pytest -q
 ```
