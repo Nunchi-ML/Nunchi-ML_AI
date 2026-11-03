@@ -22,7 +22,7 @@ import find_sun_frames as F
 
 API = "https://apis.data.go.kr/1360000/AsosHourlyInfoService/getWthrDataList"
 CACHE = F.ROOT / "data" / "asos" / "daegu_143.csv"
-STATIONS = {143: "daegu", 108: "seoul"}
+STATIONS = {143: "daegu", 108: "seoul", 133: "daejeon", 155: "changwon"}
 
 
 def cache(stn):
