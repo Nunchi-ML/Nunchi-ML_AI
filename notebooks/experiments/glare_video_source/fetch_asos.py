@@ -58,7 +58,7 @@ def ensure(days, stn=143):
         have = pd.DataFrame(columns=["tm", *COLS.values()])
     got = set(have.tm.str[:10].str.replace("-", ""))
     todo = sorted(set(days) - got)
-    k = key()
+    k = key() if todo else None                       # 캐시에 다 있으면 키 없이도 됨
     for n, day in enumerate(todo, 1):
         have = pd.concat([have, fetch_day(day, k, stn)], ignore_index=True)
         print(f"  ASOS {n}/{len(todo)} {day}", flush=True)
