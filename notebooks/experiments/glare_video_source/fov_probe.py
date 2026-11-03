@@ -27,8 +27,8 @@ import retrain_korea as R
 OUT = F.OUT
 
 
-def camera_params(ids):
-    cache = OUT / "camera_params.csv"
+def camera_params(ids, out=None):
+    cache = (out or OUT) / "camera_params.csv"
     have = pd.read_csv(cache) if cache.exists() else pd.DataFrame(columns=["id", "focal", "width", "height", "camera_type"])
     tok, rows = F.token(), []
     for n, i in enumerate([i for i in ids if i not in set(have.id)], 1):

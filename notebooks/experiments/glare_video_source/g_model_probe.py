@@ -1,6 +1,8 @@
 """G (해 위치 + 날씨) — 손 규칙 vs 데이터로 학습한 모델. 화면 특징 없이 카메라와 상관없는 값만.
 
-입력 (한국 라벨 사진 중 진행 방향을 믿을 수 있는 것, ASOS 대구 날씨 붙임):
+입력 (라벨 사진 중 진행 방향을 믿을 수 있는 것):
+    대구  블랙박스 · 도로 광각 (성진 라벨, ASOS 대구 143)
+    서울  운전 시점 60장 (3인 다수결, ASOS 서울 108, make_seoul_label_set.py · compare_aihub_labels.py --dir data/glare_mapillary_seoul)
     운전자 기준  sun_alt · gap(Δ) · cloud · sunshine                    — 앱이 GPS · 나침반 · 시각 · 날씨만 알면 됨
     화각 반영    sun_alt · u · v · in_fov · cloud · sunshine            — 카메라 화각까지 알 때
 모델:
@@ -9,8 +11,8 @@
     결정트리     깊이 3 — 학습된 경계가 규칙 모양으로 나옴
     LightGBM     단조 제약 (Δ · 구름 ↑ → 눈부심 ↓, 일조 ↑ → 눈부심 ↑)
 검증:
-    ① 카메라 바꾸기 — 블랙박스로 학습 → 도로 광각 시험, 반대도
-    ② 촬영 단위 GroupKFold 5 × 30 반복 (두 카메라 섞어서)
+    ① 카메라 하나 빼고 학습 → 뺀 카메라로 시험 (블랙박스 · 도로 광각 · 서울 폰)
+    ② 촬영 단위 GroupKFold 5 × 30 반복 (전부 섞어서)
 
     python notebooks/experiments/glare_video_source/g_model_probe.py
 """
@@ -25,10 +27,12 @@ from sklearn.tree import DecisionTreeClassifier, export_text
 
 import fetch_asos as A
 import find_sun_frames as F
+import fov_probe as P
 import retrain_korea as R
 import v2_candidate as V
 
 OUT = F.OUT
+SEOUL = F.ROOT / "data" / "glare_mapillary_seoul"
 SEED = 0
 SETS = {"운전자 기준": ["sun_alt", "gap", "cloud", "sunshine"],
         "화각 반영": ["sun_alt", "u", "v", "in_fov", "cloud", "sunshine"]}
@@ -40,8 +44,21 @@ def data():
     t = pd.concat([pd.read_csv(OUT / n)[["id", "captured_at_kst"]] for n in ("labels_drive.csv", "labels_dash.csv")]).drop_duplicates("id")
     k = A.attach(k.merge(t, on="id"))
     k = k[k.sun_alt.notna() & k.gap.notna() & k.cloud.notna()].reset_index(drop=True)
+    k = pd.concat([k, seoul()], ignore_index=True)
     k[["u", "v", "in_fov"]] = k[["u", "v", "in_fov"]].fillna({"u": 9, "v": -9, "in_fov": 0})   # 해가 뒤쪽 → 화면 밖
     return k
+
+
+def seoul():
+    m = pd.read_csv(SEOUL / "labels_merged.csv")[["id", "majority"]].dropna()
+    s = pd.read_csv(SEOUL / "label_set.csv").merge(m, on="id")
+    s = s.merge(P.camera_params(s.id.tolist(), SEOUL)[["id", "focal", "width", "height"]], on="id")
+    s["heading_suspect"] = False                                   # 세트를 만들 때 이미 뺌
+    s = pd.concat([s.reset_index(drop=True), P.fov_features(s).reset_index(drop=True)], axis=1)
+    s = A.attach(s, stn=108)
+    s = s.assign(label=s.majority.astype(int), camera="서울 폰",
+                 group="se:" + s.model.fillna("?").astype(str) + " " + s.captured_at_kst.str[:10])
+    return s[s.focal.notna() & s.cloud.notna()]
 
 
 def rule(d):
@@ -65,23 +82,23 @@ def fmt(s):
 def main():
     k = data()
     y = k.label.to_numpy()
-    cams = ("블랙박스", "도로 광각")
+    cams = tuple(k.camera.unique())
     print(f"사진 {len(k)}장 · " + " · ".join(f"{c} {int(k.camera.eq(c).sum())}" for c in cams)
           + f" · 라벨 {k.label.value_counts().sort_index().to_dict()} · 촬영 {k.group.nunique()}개\n")
 
-    print("① 카메라 바꾸기 (학습 → 시험)")
+    print("① 카메라 하나 빼고 학습 → 뺀 카메라로 시험")
     p = rule(k)
     print(f"  {'규칙 (학습 없음)':24s} " + " | ".join(f"→{c} {fmt(R.scores(y[k.camera.eq(c)], p[k.camera.eq(c)]))}" for c in cams))
     for sname, cols in SETS.items():
         for mname, make in MODELS.items():
             out = []
-            for tr_c, te_c in ((cams[0], cams[1]), (cams[1], cams[0])):
-                tr, te = k.camera.eq(tr_c).to_numpy(), k.camera.eq(te_c).to_numpy()
-                pp = make(cols).fit(k.loc[tr, cols], y[tr]).predict(k.loc[te, cols])
+            for te_c in cams:
+                te = k.camera.eq(te_c).to_numpy()
+                pp = make(cols).fit(k.loc[~te, cols], y[~te]).predict(k.loc[te, cols])
                 out.append(f"→{te_c} {fmt(R.scores(y[te], pp))}")
             print(f"  {sname + ' · ' + mname:24s} " + " | ".join(out))
 
-    print("\n② 촬영 단위 GroupKFold 5 × 30 (두 카메라 섞음, 평균 ± 표준편차)")
+    print("\n② 촬영 단위 GroupKFold 5 × 30 (전부 섞음, 평균 ± 표준편차)")
     print(f"  {'규칙 (학습 없음)':24s} {fmt(R.scores(y, rule(k)))}")
     for sname, cols in SETS.items():
         for mname, make in MODELS.items():
