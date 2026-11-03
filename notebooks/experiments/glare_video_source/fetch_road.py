@@ -1,6 +1,7 @@
-"""OpenStreetMap 에서 대구 도로 이름으로 도로선 받기 → find_sun_frames.py --route 에 넣는 JSON.
+"""OpenStreetMap 에서 도로 이름으로 (대구 · 서울) 도로선 받기 → find_sun_frames.py --route 에 넣는 JSON.
 
     python notebooks/experiments/glare_video_source/fetch_road.py 신천대로 --tag sincheon
+    python notebooks/experiments/glare_video_source/fetch_road.py 올림픽대로 --tag olympic --region seoul
 결과: data/roads/<tag>.json  {"name": ..., "lines": [[[lon, lat], ...], ...]}  (git 제외, © OpenStreetMap 기여자 ODbL)
 """
 import argparse
@@ -12,10 +13,11 @@ import requests
 
 ROOT = Path(__file__).resolve().parents[3]
 OVERPASS = "https://overpass-api.de/api/interpreter"
-DAEGU = (35.75, 128.40, 36.05, 128.80)            # 남 · 서 · 북 · 동
+REGIONS = {"daegu": (35.75, 128.40, 36.05, 128.80),   # 남 · 서 · 북 · 동
+           "seoul": (37.42, 126.76, 37.71, 127.19)}
 
 
-def fetch(name, bbox=DAEGU):
+def fetch(name, bbox=REGIONS["daegu"]):
     s, w, n, e = bbox
     q = f'[out:json][timeout:90];way["highway"]["name"="{name}"]({s},{w},{n},{e});out geom;'
     for attempt in range(4):
@@ -33,8 +35,9 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("name", help="도로 이름 (예: 신천대로)")
     ap.add_argument("--tag", required=True, help="파일 이름 (예: sincheon)")
+    ap.add_argument("--region", default="daegu", choices=REGIONS)
     a = ap.parse_args()
-    lines = fetch(a.name)
+    lines = fetch(a.name, REGIONS[a.region])
     if not lines:
         raise SystemExit(f"'{a.name}' 도로선이 없어요")
     out = ROOT / "data" / "roads" / f"{a.tag}.json"
