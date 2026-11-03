@@ -30,8 +30,9 @@ OUT = F.OUT
 def camera_params(ids, out=None):
     cache = (out or OUT) / "camera_params.csv"
     have = pd.read_csv(cache) if cache.exists() else pd.DataFrame(columns=["id", "focal", "width", "height", "camera_type"])
-    tok, rows = F.token(), []
-    for n, i in enumerate([i for i in ids if i not in set(have.id)], 1):
+    todo = [i for i in ids if i not in set(have.id)]
+    tok, rows = (F.token() if todo else None), []          # 캐시에 다 있으면 토큰 없이도 됨
+    for n, i in enumerate(todo, 1):
         r = requests.get(f"https://graph.mapillary.com/{i}", timeout=60, params={
             "access_token": tok, "fields": "camera_parameters,width,height,camera_type"}).json()
         cp = r.get("camera_parameters") or [np.nan]

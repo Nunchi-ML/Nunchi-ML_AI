@@ -10,8 +10,11 @@
 검증: ① 카메라 하나 빼고 시험 (도로 광각 · 블랙박스 · 서울 폰)  ② 촬영 단위 GroupKFold 5 × 30
 
     python notebooks/experiments/glare_video_source/g_fusion_probe.py
+    G_AIHUB=1 · G_SCREEN_NORM=1 로 AI Hub 추가 · 화면 숫자 카메라별 표준화 (둘 다 환경변수)
 서울 사진 화면 숫자는 처음 한 번 뽑아 data/glare_mapillary_seoul/screen_features.csv 에 둠.
 """
+import os
+
 import numpy as np
 import pandas as pd
 from sklearn.linear_model import LogisticRegression
@@ -27,7 +30,8 @@ import retrain_korea as R
 
 G_COLS = G.SETS["화각 반영"]
 SCREEN2 = ["brightest_x", "bright_blob"]
-CAMS = ("도로 광각", "블랙박스", "서울 폰")
+CAMS = ("도로 광각", "블랙박스", "서울 폰") + (("AI Hub",) if G.AIHUB else ())
+SCREEN_NORM = os.getenv("G_SCREEN_NORM") == "1"
 
 
 def data():
@@ -41,7 +45,11 @@ def data():
         f.to_csv(cache, index=False, encoding="utf-8-sig")
     f = f.set_index("id")
     d.loc[s, FEATURES] = f.loc[d.id[s], FEATURES].to_numpy()
-    return d[d[FEATURES].notna().all(axis=1)].reset_index(drop=True)
+    d = d[d[FEATURES].notna().all(axis=1)].reset_index(drop=True)
+    if SCREEN_NORM:      # 카메라마다 자기 평균 · 편차로 (라벨 안 씀 — 앱은 그 기기 최근 화면들로 똑같이 가능)
+        g = d.groupby("camera")[FEATURES]
+        d[FEATURES] = (d[FEATURES] - g.transform("mean")) / g.transform("std").replace(0, 1)
+    return d
 
 
 def logit():

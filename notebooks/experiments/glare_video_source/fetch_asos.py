@@ -22,7 +22,7 @@ import find_sun_frames as F
 
 API = "https://apis.data.go.kr/1360000/AsosHourlyInfoService/getWthrDataList"
 CACHE = F.ROOT / "data" / "asos" / "daegu_143.csv"
-STATIONS = {143: "daegu", 108: "seoul"}
+STATIONS = {143: "daegu", 108: "seoul", 133: "daejeon", 155: "changwon"}
 
 
 def cache(stn):
@@ -58,7 +58,7 @@ def ensure(days, stn=143):
         have = pd.DataFrame(columns=["tm", *COLS.values()])
     got = set(have.tm.str[:10].str.replace("-", ""))
     todo = sorted(set(days) - got)
-    k = key()
+    k = key() if todo else None                       # 캐시에 다 있으면 키 없이도 됨
     for n, day in enumerate(todo, 1):
         have = pd.concat([have, fetch_day(day, k, stn)], ignore_index=True)
         print(f"  ASOS {n}/{len(todo)} {day}", flush=True)

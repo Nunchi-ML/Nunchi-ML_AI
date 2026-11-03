@@ -3,6 +3,7 @@
 입력 (라벨 사진 중 진행 방향을 믿을 수 있는 것):
     대구  블랙박스 · 도로 광각 (성진 라벨, ASOS 대구 143)
     서울  운전 시점 60장 (3인 다수결, ASOS 서울 108, make_seoul_label_set.py · compare_aihub_labels.py --dir data/glare_mapillary_seoul)
+    AI Hub 역광 304장 (G_AIHUB=1 일 때만 · 3인 다수결 · aihub_heading.py 로 복원한 주행 방향 · ASOS 서울 108 · 대전 133 · 창원 155)
     운전자 기준  sun_alt · gap(Δ) · cloud · sunshine                    — 앱이 GPS · 나침반 · 시각 · 날씨만 알면 됨
     화각 반영    sun_alt · u · v · in_fov · cloud · sunshine            — 카메라 화각까지 알 때
 모델:
@@ -15,7 +16,10 @@
     ② 촬영 단위 GroupKFold 5 × 30 반복 (전부 섞어서)
 
     python notebooks/experiments/glare_video_source/g_model_probe.py
+    G_AIHUB=1 python notebooks/experiments/glare_video_source/g_model_probe.py     # AI Hub 를 네 번째 카메라로 (②-v4)
 """
+import os
+
 import numpy as np
 import pandas as pd
 import lightgbm as lgb
@@ -33,6 +37,10 @@ import v2_candidate as V
 
 OUT = F.OUT
 SEOUL = F.ROOT / "data" / "glare_mapillary_seoul"
+AIHUB_DIR = F.ROOT / "data" / "aihub_special"
+AIHUB = os.getenv("G_AIHUB") == "1"
+AIHUB_STN = {"seoul2": 108, "daejeon": 133, "changwon": 155}
+AIHUB_FOCAL, AIHUB_W, AIHUB_H = 1067.25 / 1920, 1920, 1200   # calib.txt fx (세 지역 같음)
 SEED = 0
 SETS = {"운전자 기준": ["sun_alt", "gap", "cloud", "sunshine"],
         "화각 반영": ["sun_alt", "u", "v", "in_fov", "cloud", "sunshine"]}
@@ -44,7 +52,7 @@ def data():
     t = pd.concat([pd.read_csv(OUT / n)[["id", "captured_at_kst"]] for n in ("labels_drive.csv", "labels_dash.csv")]).drop_duplicates("id")
     k = A.attach(k.merge(t, on="id"))
     k = k[k.sun_alt.notna() & k.gap.notna() & k.cloud.notna()].reset_index(drop=True)
-    k = pd.concat([k, seoul()], ignore_index=True)
+    k = pd.concat([k, seoul()] + ([aihub()] if AIHUB else []), ignore_index=True)
     k[["u", "v", "in_fov"]] = k[["u", "v", "in_fov"]].fillna({"u": 9, "v": -9, "in_fov": 0})   # 해가 뒤쪽 → 화면 밖
     return k
 
@@ -59,6 +67,21 @@ def seoul():
     s = s.assign(label=s.majority.astype(int), camera="서울 폰",
                  group="se:" + s.model.fillna("?").astype(str) + " " + s.captured_at_kst.str[:10])
     return s[s.focal.notna() & s.cloud.notna()]
+
+
+def aihub():
+    m = pd.read_csv(AIHUB_DIR / "labels_merged.csv")[["id", "file", "sequence", "majority"]].dropna()
+    m["area"], m["drive_name"] = m.sequence.str.split("/").str[0], m.sequence.str.split("/").str[1]
+    h = pd.read_csv(AIHUB_DIR / "drive_heading.csv")
+    h["drive_name"] = h.drive.str.split("/").str[-1]
+    s = m.merge(h[h.split.eq("Validation")][["area", "drive_name", "time", "lat", "lon", "heading", "sun_alt", "sun_az", "gap"]],
+                on=["area", "drive_name"])
+    s = s.merge(pd.read_csv(AIHUB_DIR / "aihub_features.csv"), on="id")
+    s = s.assign(focal=AIHUB_FOCAL, width=AIHUB_W, height=AIHUB_H, heading_suspect=False, captured_at_kst=s.time.str[:19])
+    s = pd.concat([s.reset_index(drop=True), P.fov_features(s).reset_index(drop=True)], axis=1)
+    s = pd.concat([A.attach(g, stn=AIHUB_STN[a]) for a, g in s.groupby("area")], ignore_index=True)
+    s = s.assign(label=s.majority.astype(int), camera="AI Hub", group="ah:" + s.area + " " + s.captured_at_kst.str[:10])
+    return s[s.heading.notna() & s.cloud.notna()]
 
 
 def rule(d):
