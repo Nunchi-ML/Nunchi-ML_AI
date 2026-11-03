@@ -9,7 +9,7 @@
     rn       강수 (mm, 빈칸 = 0 — 젖은 도로 반사)
 
     python notebooks/experiments/glare_video_source/fetch_asos.py
-결과: data/asos/daegu_143.csv (날짜별로 받아 쌓음 — 이미 받은 날은 다시 안 물음)
+결과: data/asos/daegu_143.csv (날짜별로 받아 쌓음 — 이미 받은 날은 다시 안 물음). 서울은 attach(d, stn=108) → seoul_108.csv
       사진에 붙이기는 attach() — 촬영 시각의 가장 가까운 정시 값
 """
 import time
@@ -22,6 +22,11 @@ import find_sun_frames as F
 
 API = "https://apis.data.go.kr/1360000/AsosHourlyInfoService/getWthrDataList"
 CACHE = F.ROOT / "data" / "asos" / "daegu_143.csv"
+STATIONS = {143: "daegu", 108: "seoul"}
+
+
+def cache(stn):
+    return F.ROOT / "data" / "asos" / f"{STATIONS[stn]}_{stn}.csv"
 COLS = {"dc10Tca": "cloud", "ss": "sunshine", "icsr": "radiation", "vs": "visibility", "rn": "rain"}
 
 
@@ -33,9 +38,9 @@ def key():
     raise SystemExit("KMA_SERVICE_KEY 가 없어요 — AI/.env 에 한 줄")
 
 
-def fetch_day(day, k):
+def fetch_day(day, k, stn=143):
     p = {"serviceKey": k, "pageNo": 1, "numOfRows": 30, "dataType": "JSON", "dataCd": "ASOS", "dateCd": "HR",
-         "startDt": day, "startHh": "00", "endDt": day, "endHh": "23", "stnIds": "143"}
+         "startDt": day, "startHh": "00", "endDt": day, "endHh": "23", "stnIds": str(stn)}
     for attempt in range(4):
         try:
             r = requests.get(API, params=p, timeout=60); r.raise_for_status()
@@ -46,7 +51,8 @@ def fetch_day(day, k):
     raise SystemExit(f"ASOS 응답 없음: {day}")
 
 
-def ensure(days):
+def ensure(days, stn=143):
+    CACHE = cache(stn)
     have = pd.read_csv(CACHE) if CACHE.exists() else pd.DataFrame(columns=["tm", *COLS.values()])
     if not set(COLS.values()) <= set(have.columns):                  # 받는 칸이 늘면 처음부터 다시
         have = pd.DataFrame(columns=["tm", *COLS.values()])
@@ -54,7 +60,7 @@ def ensure(days):
     todo = sorted(set(days) - got)
     k = key()
     for n, day in enumerate(todo, 1):
-        have = pd.concat([have, fetch_day(day, k)], ignore_index=True)
+        have = pd.concat([have, fetch_day(day, k, stn)], ignore_index=True)
         print(f"  ASOS {n}/{len(todo)} {day}", flush=True)
         time.sleep(0.2)
     CACHE.parent.mkdir(parents=True, exist_ok=True)
@@ -62,10 +68,10 @@ def ensure(days):
     return have
 
 
-def attach(d, time_col="captured_at_kst"):
+def attach(d, time_col="captured_at_kst", stn=143):
     """d[time_col](한국시간 문자열) 에 가장 가까운 정시의 cloud · sunshine · radiation 을 붙임. 빈 값은 NaN."""
     t = pd.to_datetime(d[time_col])
-    a = ensure(t.dt.strftime("%Y%m%d").unique())
+    a = ensure(t.dt.strftime("%Y%m%d").unique(), stn)
     a = a.assign(tm=pd.to_datetime(a.tm)).set_index("tm")
     for c in COLS.values():
         a[c] = pd.to_numeric(a[c], errors="coerce")

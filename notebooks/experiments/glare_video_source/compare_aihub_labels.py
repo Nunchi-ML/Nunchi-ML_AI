@@ -1,11 +1,13 @@
-"""AI Hub 역광 라벨 세트 308장 — 라벨러 여러 명 일치도 · 다수결 라벨.
+"""라벨러 여러 명 일치도 · 다수결 라벨 (AI Hub 역광 308장, 서울 운전 시점 60장 등).
 
     python notebooks/experiments/glare_video_source/compare_aihub_labels.py
-입력: data/aihub_special/labels_<이름>.csv (label_tool.html 'CSV 저장' 결과, 2명 이상)
-결과 (data/aihub_special/, git 제외):
+    python notebooks/experiments/glare_video_source/compare_aihub_labels.py --dir data/glare_mapillary_seoul --set label_set.csv
+입력: <dir>/labels_<이름>.csv (label_tool.html 'CSV 저장' 결과, 2명 이상)
+결과 (<dir>, 기본 data/aihub_special/, git 제외):
     labels_merged.csv     사진별 각자 라벨 · 다수결 라벨(majority, 동률이면 빈칸) · 만장일치 여부 + 해 높이 · 주행
     labels_disagree.csv   만장일치가 아닌 사진 (재검토용)
 """
+import argparse
 from itertools import combinations
 from pathlib import Path
 
@@ -26,10 +28,15 @@ def fleiss(m):
 
 
 def main():
-    files = sorted(OUT.glob("labels_*.csv"))
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--dir", type=Path, default=OUT)
+    ap.add_argument("--set", default="aihub_label_set.csv", help="사진 정보 표 (해 높이 · 묶음 등)")
+    args = ap.parse_args()
+    out = args.dir if args.dir.is_absolute() else OUT.parents[1] / args.dir
+    files = sorted(out.glob("labels_*.csv"))
     files = [f for f in files if f.stem not in ("labels_merged", "labels_disagree")]
     who = [f.stem.removeprefix("labels_") for f in files]
-    d = pd.read_csv(OUT / "aihub_label_set.csv")
+    d = pd.read_csv(out / args.set)
     for w, f in zip(who, files):
         d = d.merge(pd.read_csv(f, dtype={"label": str})[["id", "label"]].rename(columns={"label": w}), on="id")
     d = d[d[who].isin(["0", "1", "2"]).all(axis=1)].copy()          # X · 빈칸 빼기
@@ -50,9 +57,9 @@ def main():
     print("다수결 분포  ", d.majority.value_counts(dropna=False).sort_index().to_dict(), "\n")
     print(pd.crosstab(d.group, d.majority, margins=True).to_string(), "\n")
 
-    keep = ["id", "file", "group", "sequence", "frame", "sun_alt", "sun_az", *who, "majority", "unanimous"]
-    d[keep].to_csv(OUT / "labels_merged.csv", index=False, encoding="utf-8-sig")
-    d.loc[~d.unanimous, keep].to_csv(OUT / "labels_disagree.csv", index=False, encoding="utf-8-sig")
+    keep = [c for c in ["id", "file", "group", "sequence", "frame", "sun_alt", "sun_az", "gap"] if c in d] + [*who, "majority", "unanimous"]
+    d[keep].to_csv(out / "labels_merged.csv", index=False, encoding="utf-8-sig")
+    d.loc[~d.unanimous, keep].to_csv(out / "labels_disagree.csv", index=False, encoding="utf-8-sig")
     print(f"→ labels_merged.csv · labels_disagree.csv ({(~d.unanimous).sum()}장)")
 
 
