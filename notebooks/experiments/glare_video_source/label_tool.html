@@ -47,7 +47,7 @@
 </header>
 
 <div id="picker" class="pick">
-  <p><b>data/glare_mapillary</b> 폴더를 고르세요 (label_sheet_blind.csv 와 images 폴더가 들어 있는 곳)</p>
+  <p>받은 라벨 묶음 폴더를 고르세요 (label_sheet_blind.csv 와 images 폴더가 들어 있는 곳)</p>
   <input id="dir" type="file" webkitdirectory directory multiple />
   <p class="mute">사진은 이 컴퓨터 안에서만 열려요. 진행 상황은 브라우저에 자동 저장돼서 창을 닫아도 이어서 할 수 있어요.</p>
 </div>
@@ -105,7 +105,7 @@ $("dir").addEventListener("change", async (e) => {
     files.set(rel, f);
   }
   const sheet = files.get("label_sheet_blind.csv");
-  if (!sheet) { alert("label_sheet_blind.csv 가 없어요. data/glare_mapillary 폴더를 골랐는지 확인해 주세요."); return; }
+  if (!sheet) { alert("label_sheet_blind.csv 가 없어요. 라벨 묶음 폴더(label_sheet_blind.csv 가 있는 곳)를 골랐는지 확인해 주세요."); return; }
   rows = parseCSV(await sheet.text());
   loadState();
   try { $("who").value = localStorage.getItem(KEY + "-who") || ""; } catch {}
