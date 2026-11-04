@@ -1,0 +1,44 @@
+# 사진 상대 특징 두 단계 (후보 비교) — 모델 ②
+
+**상태: 후보 비교만 한다. 최종 모델(G 만) · 배포 features.py · 모델/API 는 바꾸지 않는다.**
+
+화면 숫자 12개(`glare/features.py`)는 절대 밝기 문턱을 써서 카메라가 바뀌면 무너졌다. 여기서는 사진 한 장 안에서만, 그 사진의 중앙값 · 최고 밝기에 대한 **비율**로 계산한 특징 12개를 만들고, 눈부심 여부 쪽에만 붙인 **두 단계**(여부 = G + 상대 12, 심함 = G)를 같은 프로토콜로 비교한다.
+
+| 파일 | 역할 |
+|---|---|
+| `rel_features.py` | 상대 특징 12개 (`peak_med · dyn · blob_area · blob_circ · sat_top · ring1~3 · glow_con · disc_sat · peak_x/y`). 라벨 · 해 위치 · 카메라 통계를 쓰지 않는다. |
+| `sun_visible_probe.py` | 624장에서 G 만 / 두 단계(기존 화면 12 · 상대 12) / 사진 특징 단독을 세 가지 검증으로 비교 (초기 탐색용 — 판정은 3단계 argmax 를 쓰므로 아래 프로토콜 결과를 기준으로 본다) |
+| `ablation.py` | 후진 제거로 12 → 3개. 선택은 세 카메라 점수만, 재사용 AI Hub 는 마지막 채점만. |
+| `codex_protocol_compare.py` | `g_visibility_probe.py`(PR #16) 프로토콜(고정 스냅샷 · previous 날씨 · 같은 판정 함수 · 촬영 CV 5×30 · 카메라 제외 · 재사용 AI Hub)에 두 단계 구조와 상대 12 행을 더해 비교. Codex 파일은 import 만 하고 수정하지 않는다. |
+
+## 실행 (재현)
+```
+python notebooks/experiments/sun_visible_probe/rel_features.py        # (모듈 — 직접 실행하지 않음)
+python notebooks/experiments/sun_visible_probe/sun_visible_probe.py   # 첫 실행에 data/sun_visible/rel_features.csv 생성
+python notebooks/experiments/sun_visible_probe/ablation.py
+python notebooks/experiments/sun_visible_probe/codex_protocol_compare.py \
+    --snapshot data/analysis_20261104/model2_snapshot.csv \
+    --rel data/sun_visible/rel_features.csv \
+    --cache <g_visibility_probe 가 만든 image_features.csv> --out <결과 폴더>
+```
+사진 · 특징 CSV · 결과는 git 에 올리지 않는다 (`data/`).
+
+## 결과 요약 (코드 기준 main 6062b08, Codex 프로토콜)
+| 입력 | 촬영CV F1 | CV 정상헛알림 | 서울 폰 제외 알림정확도 | 광각 제외 알림정확도 | 재사용AIHub 알림정확도 · 헛알림 · 알림재현율 |
+|---|---|---|---|---|---|
+| G | .543 | 52% | .63 | .86 | .74 · 83.0% · 1.00 |
+| 한 모델 G+밝은덩어리6 (PR #16) | .565 | 34% | .85 | .83 | .74 · 27.7% · .75 |
+| **두 단계 G+상대12** | **.623** | 33% | .87 | .84 | **.83** · 27.7% · .88 |
+| 한 모델 G+상대12 | .511 | 33% | .87 | .84 | .83 · 27.7% · .88 |
+
+- AI Hub 정상 중 헛알림 감소(83% → 27.7%)는 주행 33개 군집 부트스트랩 95% 구간 [−69%p, −33%p] 로 0 을 포함하지 않는다.
+  알림정확도 +.10 [−.01, +.31], 알림재현율 −.11 [−.22, .00] 은 구간이 0 에 걸려 확정하지 못한다.
+- 두 단계의 효과는 **심함 보존**이다 (한 모델 CV 심함 재현율 .13 → 두 단계 .66). 알림 지표는 한 모델과 같다.
+- 12개 중 하나씩 빼면 점수가 가장 떨어지는 것: `disc_sat · blob_circ · ring3`. 4~6개로 줄이면 세 카메라 점수는 오르지만 재사용 AI Hub 알림정확도가 .83 → .74~.75 로 떨어져 줄이지 않았다.
+
+## 한계 (알고 쓴다)
+- 사람이 판정한 해 가시성 · 가림 정답이 없는 **대리 특징**이다. 새 카메라에서 해가 보일 때의 재현율은 증명되지 않았다 (96장 블라인드 검수 판정 전).
+- **도로 광각 카메라에서는 나빠진다** (알림정확도 .86 → .84, 헛알림 22% → 39%). 포화된 하늘 가장자리를 해로 오인하는 사례가 있다 (PR #16 시각 검토).
+- 심한 눈부심 정밀도는 어떤 방법도 개선하지 못했다 (재사용 AI Hub .09~.15, G 도 .146).
+- AI Hub 304장은 개발 과정에서 반복 사용한 세트이고, 특징은 AI Hub 실패 원인을 본 뒤 설계했다 → **독립 외부 검증이 아니다.** 한 주행(서울2 drive_1189)이 75장.
+- `rel_features.py` 와 `nunchi_ml/glare/visibility.py`(PR #16)는 일부(6개)가 겹친다. 이 폴더는 비교용 초안이며 패키지로 옮길지는 결정하지 않았다.
