@@ -4,7 +4,7 @@
 
 # Nunchi-ML_AI
 
-데이터 정제 · EDA · 모델 ① 구간 사고 예측 · 모델 ② 화면 눈부심 분류 · 모델 ③ 터널 순응 부담
+데이터 정제 · EDA · 모델 ① 통합 안내 · 모델 ② 전방 식별 저하 분류 · 모델 ③ 밝기 전환 순응 부담
 
 ![Python](https://img.shields.io/badge/Python-3776AB?style=flat-square&logo=python&logoColor=white) ![pandas](https://img.shields.io/badge/pandas-150458?style=flat-square&logo=pandas&logoColor=white) ![scikit--learn](https://img.shields.io/badge/scikit--learn-F7931E?style=flat-square&logo=scikitlearn&logoColor=white) ![LightGBM](https://img.shields.io/badge/LightGBM-2E7D32?style=flat-square) ![GeoPandas](https://img.shields.io/badge/GeoPandas-139C5A?style=flat-square) ![OpenCV](https://img.shields.io/badge/OpenCV-5C3EE8?style=flat-square&logo=opencv&logoColor=white) ![pvlib](https://img.shields.io/badge/pvlib-F2522E?style=flat-square) ![SHAP](https://img.shields.io/badge/SHAP-FF0D57?style=flat-square) ![Optuna](https://img.shields.io/badge/Optuna-2C5BB4?style=flat-square)
 
@@ -17,6 +17,24 @@
 ## 👥 담당
 
 데이터 엔지니어 A · B, AI 엔지니어 A · B
+
+## 🧭 현재 서비스 목적 · 2026-11-04 사용자 확정
+
+주행 영상과 밝기 변화 정보를 결합해 **전방 정보 식별 저하와 순응 부담을 안내**한다. 기존 사고 예측·관련성 분석은 연구 기록으로 보존하고, 실제 사고 확률 산출은 현재 서비스의 필수 완료 조건에서 제외한다.
+
+| 구성 | 현재 역할 | 출력의 의미 |
+|---|---|---|
+| 모델① 통합 안내 | ②·③ 결과를 위치·시각·진행 방향에 맞춰 연결 | 지도 구간·현재 경고·사전 주의와 원인. 통합 구현은 후속 작업 |
+| 모델② 현재 전방 상태 | 태양광 눈부심으로 사진 속 차선·앞차·표지판 식별이 저하되는 정도 분류 | 사진 기반 0/1/2 판정. 실제 운전자 생리적 시야의 직접 측정과 구분 |
+| 모델③ 밝기 전환 부담 | 밝기 차이가 큰 지점에서 순응 부담 추정 | 예상 동공 변화 시각화·주의 안내. 실제 적응시간·사고 위험은 별도 검증 |
+
+통합 규칙안은 두 원인을 각각 표시하면서 더 높은 주의 수준의 경고를 대표로 보여주고 같은 지점의 알림은 묶는 방식이다. 아직 검증된 경고 기준이 아니며, 점수의 임의 가중합을 사고 확률로 표시하지 않는다. 시간·위치·방향·유효시간·계산 버전을 맞추고 결측을 정상/부담0으로 채우지 않는다. 이번 변경은 문서 기준이며 운영 모델·API 변경은 없다.
+
+모델②는 기존 정답과 성진50장 원본 라벨을 보존한다. 동일320장·촬영그룹 CV의 기준 Macro F1 .6229와 새 특징을 비교하며, 성진50장 사진 모델 평가는 다른 조건으로 보고한다. 성능 개선이 검증될 때까지 최종 모델 결정을 보류한다. 사진의 대비나 밝기 수식으로 정답을 새로 만들어 같은 입력으로 평가하지 않는다.
+
+**AI 보조 라벨링은 검토 제안이다.** 기존 Claude 임시 라벨은 사람과 공통48장 중34장 일치(70.8%, 카파 .473)했다. Gemini 등 추가 이미지 이해 모델 후보에는 사람·기존 AI 답안을 숨기고 태양/번짐 근거, 대상별 식별성, 저하 원인, 등급 또는 판단 보류를 기록하게 하는 방안을 검토한다. 후보 우위·새 AI 판정은 미검증이며 AI 합의를 실제 운전자 정답으로 간주하지 않는다. AI 학습 라벨과 사람 평가를 구분한다. 최종 분류기는 딥러닝·신경망 임베딩 없이 전통 머신러닝으로 실험한다.
+
+동공 크기 추정은 밝기에 적응한 상태의 예상 크기이며 적응시간을 직접 뜻하지 않는다([Watson·Yellott, 2012](https://pubmed.ncbi.nlm.nih.gov/23012448/)). 보정되지 않은 JPEG 픽셀을 물리적 휘도로 간주하지 않는다. 상세 역할·후속 상태 정본은 [모델링 계획서](https://app.notion.com/p/01e2ae67f0e74a8ab5dc8bf3e1576011)의 「현재 역할과 통합 원칙」이다. 아래 기존 사고 모델 설명은 연구·코드 구조 기록으로 보존한다.
 
 ## 📁 폴더 — 어디에 뭘 두나
 
