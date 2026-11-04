@@ -1,0 +1,400 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "SunSight Model 1 Accident Risk API",
+    "description": "고속도로 1km 구간별 태양 역광 사고 위험도 예측 및 서빙 API (nunchi_ml.accident)",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "summary": "Health Check",
+        "description": "서버 헬스체크 및 로드된 모델 메타데이터 반환.",
+        "operationId": "health_check_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/predict": {
+      "post": {
+        "tags": [
+          "Inference"
+        ],
+        "summary": "Predict Single",
+        "description": "단일 1km 도로 구간 사고 위험도 및 등급 예측.",
+        "operationId": "predict_single_predict_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SegmentInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PredictionOutput"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/predict/batch": {
+      "post": {
+        "tags": [
+          "Inference"
+        ],
+        "summary": "Predict Batch Api",
+        "description": "다수 도로 구간 일괄 고속 예측.",
+        "operationId": "predict_batch_api_predict_batch_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchPredictionInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchPredictionOutput"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "BatchPredictionInput": {
+        "properties": {
+          "segments": {
+            "items": {
+              "$ref": "#/components/schemas/SegmentInput"
+            },
+            "type": "array",
+            "maxItems": 10000,
+            "title": "Segments",
+            "description": "예측할 도로 구간 목록"
+          }
+        },
+        "type": "object",
+        "required": [
+          "segments"
+        ],
+        "title": "BatchPredictionInput"
+      },
+      "BatchPredictionOutput": {
+        "properties": {
+          "total_count": {
+            "type": "integer",
+            "title": "Total Count"
+          },
+          "predictions": {
+            "items": {
+              "$ref": "#/components/schemas/PredictionOutput"
+            },
+            "type": "array",
+            "title": "Predictions"
+          },
+          "total_latency_ms": {
+            "type": "number",
+            "title": "Total Latency Ms"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total_count",
+          "predictions",
+          "total_latency_ms"
+        ],
+        "title": "BatchPredictionOutput"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "PredictionOutput": {
+        "properties": {
+          "segment_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Segment Id"
+          },
+          "predicted_accident_risk": {
+            "type": "number",
+            "title": "Predicted Accident Risk",
+            "description": "연간 예상 사고 위험 지수 (Poisson Rate, 절대 사고 확률이 아님)"
+          },
+          "risk_grade": {
+            "type": "string",
+            "enum": [
+              "SAFE",
+              "WARNING",
+              "DANGER"
+            ],
+            "title": "Risk Grade",
+            "description": "위험도 등급"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "description": "위험 등급 한글 설명"
+          },
+          "architecture": {
+            "type": "string",
+            "title": "Architecture",
+            "description": "추론 모델 구조 (예: lightgbm_single)"
+          },
+          "model_version": {
+            "type": "string",
+            "title": "Model Version",
+            "description": "모델 패키지 버전"
+          },
+          "inference_time_ms": {
+            "type": "number",
+            "title": "Inference Time Ms",
+            "description": "추론 소요 시간 (밀리초)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "predicted_accident_risk",
+          "risk_grade",
+          "description",
+          "architecture",
+          "model_version",
+          "inference_time_ms"
+        ],
+        "title": "PredictionOutput"
+      },
+      "SegmentInput": {
+        "properties": {
+          "segment_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Segment Id",
+            "description": "구간 고유 식별자 (예: GYEONGBU_10KM)"
+          },
+          "route": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Route",
+            "description": "노선명 (예: 경부선)"
+          },
+          "segment_km": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Segment Km",
+            "description": "이정표 km 지점 (예: 10)"
+          },
+          "segment_length_km": {
+            "type": "number",
+            "maximum": 5.0,
+            "minimum": 0.01,
+            "title": "Segment Length Km",
+            "description": "구간 길이 (km)"
+          },
+          "is_partial_segment": {
+            "type": "integer",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Is Partial Segment",
+            "description": "불완전 구간 여부 (0 또는 1)",
+            "default": 0
+          },
+          "curvature_mean": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Curvature Mean",
+            "description": "평균 곡률"
+          },
+          "curvature_max": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Curvature Max",
+            "description": "최대 곡률"
+          },
+          "min_tunnel_dist_km": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Min Tunnel Dist Km",
+            "description": "가장 가까운 터널과의 거리 (km)"
+          },
+          "has_tunnel_within_1km": {
+            "type": "integer",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Has Tunnel Within 1Km",
+            "description": "1km 이내 터널 존재 여부 (0 또는 1)"
+          },
+          "tunnel_portals_1km": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Tunnel Portals 1Km",
+            "description": "1km 이내 터널 포털(입·출구) 개수"
+          },
+          "max_tunnel_length_1km": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Max Tunnel Length 1Km",
+            "description": "1km 이내 가장 긴 터널의 길이 (m)"
+          },
+          "ew_alignment": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Ew Alignment",
+            "description": "동서축 정렬도 (|sin(bearing)|)"
+          },
+          "annual_glare_hours_fwd": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Annual Glare Hours Fwd",
+            "description": "정방향 연간 잠재 역광 시간 (h)"
+          },
+          "commute_glare_hours": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Commute Glare Hours",
+            "description": "출퇴근 시간대 잠재 역광 시간 (h)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "segment_length_km",
+          "curvature_mean",
+          "curvature_max",
+          "min_tunnel_dist_km",
+          "has_tunnel_within_1km",
+          "tunnel_portals_1km",
+          "max_tunnel_length_1km",
+          "ew_alignment",
+          "annual_glare_hours_fwd",
+          "commute_glare_hours"
+        ],
+        "title": "SegmentInput"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SunSight - 전국 고속도로 태양 역광 사고 위험도 지도 (Model 1)</title>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: #111827;
+            color: #f3f4f6;
+            overflow: hidden;
+        }
+        #sidebar {
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            bottom: 16px;
+            z-index: 1000;
+            width: 360px;
+            background: rgba(17, 24, 39, 0.94);
+            backdrop-filter: blur(10px);
+            padding: 18px 20px;
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow: 0 12px 30px rgba(0,0,0,0.6);
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+        }
+        #sidebar h1 {
+            margin: 0 0 4px 0;
+            font-size: 18px;
+            font-weight: 700;
+            color: #fbbf24;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .meta-tag {
+            font-size: 11px;
+            color: #9ca3af;
+            margin-bottom: 12px;
+            display: flex;
+            gap: 6px;
+        }
+        .meta-pill {
+            background: rgba(255, 255, 255, 0.08);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+        .stat-card {
+            background: rgba(31, 41, 55, 0.7);
+            padding: 8px;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .stat-card:hover {
+            background: rgba(55, 65, 81, 0.9);
+            transform: translateY(-2px);
+        }
+        .stat-val { font-size: 16px; font-weight: 700; }
+        .stat-lbl { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+        .danger-color { color: #ef4444; }
+        .warning-color { color: #f59e0b; }
+        .safe-color { color: #10b981; }
+
+        /* 필터 컨트롤 */
+        .filter-section {
+            background: rgba(31, 41, 55, 0.5);
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .filter-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #d1d5db;
+            margin-bottom: 6px;
+            display: flex;
+            justify-content: space-between;
+        }
+        select, input[type="text"] {
+            width: 100%;
+            background: #1f2937;
+            color: #f3f4f6;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 7px 10px;
+            border-radius: 6px;
+            font-size: 13px;
+            box-sizing: border-box;
+            outline: none;
+        }
+        select:focus, input[type="text"]:focus {
+            border-color: #fbbf24;
+        }
+
+        /* 랭킹 리스트 */
+        .rank-header {
+            font-size: 12px;
+            font-weight: 600;
+            color: #d1d5db;
+            margin-bottom: 6px;
+            display: flex;
+            justify-content: space-between;
+        }
+        #rank-list {
+            flex: 1;
+            overflow-y: auto;
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .rank-item {
+            padding: 8px 10px;
+            border-radius: 6px;
+            background: rgba(31, 41, 55, 0.6);
+            margin-bottom: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: background 0.15s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .rank-item:hover {
+            background: rgba(55, 65, 81, 0.9);
+        }
+        .rank-route { font-weight: 600; color: #f3f4f6; }
+        .rank-km { font-size: 11px; color: #9ca3af; margin-left: 4px; }
+        .rank-risk { font-weight: 700; color: #ef4444; }
+
+        /* 분석 한계 안내 배너 */
+        .disclaimer {
+            margin-top: 10px;
+            padding: 8px 10px;
+            background: rgba(239, 68, 68, 0.1);
+            border-left: 3px solid #ef4444;
+            border-radius: 4px;
+            font-size: 11px;
+            color: #d1d5db;
+            line-height: 1.35;
+        }
+
+        #map { width: 100%; height: 100%; }
+
+        /* Leaflet popup styling */
+        .leaflet-popup-content-wrapper {
+            background: #1f2937 !important;
+            color: #f3f4f6 !important;
+            border-radius: 10px !important;
+            border: 1px solid rgba(255,255,255,0.15);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        }
+        .leaflet-popup-tip { background: #1f2937 !important; }
+        .popup-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: #fbbf24;
+            margin-bottom: 8px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 4px;
+        }
+        .popup-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            margin: 4px 0;
+            color: #d1d5db;
+        }
+        .popup-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: 700;
+            font-size: 11px;
+        }
+        .badge-danger { background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid #ef4444; }
+        .badge-warning { background: rgba(245, 158, 11, 0.2); color: #f59e0b; border: 1px solid #f59e0b; }
+        .badge-safe { background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid #10b981; }
+    </style>
+</head>
+<body>
+
+<div id="sidebar">
+    <h1>☀️ SunSight Expressway Risk</h1>
+    <div class="meta-tag">
+        <span class="meta-pill">Model ① (v1.0.0)</span>
+        <span class="meta-pill">전국 5,782개 구간</span>
+    </div>
+    
+    <div class="stats-grid">
+        <div class="stat-card" onclick="filterByGrade('DANGER')">
+            <div class="stat-val danger-color" id="cnt-danger">404</div>
+            <div class="stat-lbl">고위험 (≥0.035)</div>
+        </div>
+        <div class="stat-card" onclick="filterByGrade('WARNING')">
+            <div class="stat-val warning-color" id="cnt-warning">1,282</div>
+            <div class="stat-lbl">주의 (≥0.025)</div>
+        </div>
+        <div class="stat-card" onclick="filterByGrade('SAFE')">
+            <div class="stat-val safe-color" id="cnt-safe">4,096</div>
+            <div class="stat-lbl">안전 (<0.025)</div>
+        </div>
+    </div>
+
+    <!-- 노선 및 등급 필터 -->
+    <div class="filter-section">
+        <div class="filter-label">
+            <span>노선 필터링</span>
+            <span id="route-count-badge" style="color: #9ca3af; font-weight: normal;">전체 노선</span>
+        </div>
+        <select id="route-select" onchange="applyFilters()">
+            <option value="ALL">전국 노선 전체 (61개 노선)</option>
+        </select>
+        <div style="margin-top: 8px;">
+            <select id="grade-select" onchange="applyFilters()">
+                <option value="ALL">위험 등급 전체 보기</option>
+                <option value="DANGER">🔴 DANGER (고위험 상위 7%)</option>
+                <option value="WARNING">🟡 WARNING (주의 상위 29%)</option>
+                <option value="SAFE">🟢 SAFE (안전)</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- 고위험 Top 구간 랭킹 -->
+    <div class="rank-header">
+        <span>🔥 고위험 상위 구간 목록</span>
+        <span style="font-size: 11px; color: #9ca3af;" id="filtered-total-lbl">5,782개 표시 중</span>
+    </div>
+    <div id="rank-list"></div>
+
+    <!-- 분석 한계 안내 -->
+    <div class="disclaimer">
+        ⚠️ <b>위험 지수 해석 유의</b>: 본 위험 지수는 기하학적 정면 저각도 태양 노출 시간에 기반한 <b>상대적 위험 점수(Poisson Rate)</b>이며, VDS 교통량이 통제된 절대 사고 확률이 아닙니다.
+    </div>
+</div>
+
+<div id="map"></div>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    let allPoints = [];
+    let markers = [];
+    const markerGroup = L.layerGroup();
+
+    const map = L.map('map', {
+        center: [36.2, 127.8],
+        zoom: 8,
+        zoomControl: false
+    });
+
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+    // CartoDB Dark Matter
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; CARTO &copy; SunSight ML Team',
+        maxZoom: 18,
+        subdomains: 'abcd'
+    }).addTo(map);
+
+    markerGroup.addTo(map);
+
+    // 데이터 로드
+    fetch('./expressway_risk_data.json')
+        .then(res => res.json())
+        .then(data => {
+            allPoints = data;
+            initRouteSelect(data);
+            applyFilters();
+        });
+
+    function initRouteSelect(data) {
+        const routes = [...new Set(data.map(d => d.route))].sort();
+        const select = document.getElementById('route-select');
+        routes.forEach(r => {
+            const opt = document.createElement('option');
+            opt.value = r;
+            opt.textContent = r;
+            select.appendChild(opt);
+        });
+    }
+
+    function filterByGrade(grade) {
+        document.getElementById('grade-select').value = grade;
+        applyFilters();
+    }
+
+    function applyFilters() {
+        markerGroup.clearLayers();
+        markers = [];
+
+        const selectedRoute = document.getElementById('route-select').value;
+        const selectedGrade = document.getElementById('grade-select').value;
+
+        const filtered = allPoints.filter(d => {
+            const routeMatch = selectedRoute === 'ALL' || d.route === selectedRoute;
+            const gradeMatch = selectedGrade === 'ALL' || d.grade === selectedGrade;
+            return routeMatch && gradeMatch;
+        });
+
+        document.getElementById('filtered-total-lbl').textContent = `${filtered.length.toLocaleString()}개 표시 중`;
+
+        // 랭킹 리스트 갱신 (위험도 순 정렬)
+        const sorted = [...filtered].sort((a, b) => b.risk - a.risk);
+        renderRankList(sorted.slice(0, 30));
+
+        // 지도 마커 렌더링
+        filtered.forEach(d => {
+            let color = '#10b981';
+            let radius = 2.5;
+            let opacity = 0.5;
+
+            if (d.grade === 'DANGER') {
+                color = '#ef4444';
+                radius = 5.0;
+                opacity = 0.85;
+            } else if (d.grade === 'WARNING') {
+                color = '#f59e0b';
+                radius = 3.5;
+                opacity = 0.7;
+            }
+
+            const marker = L.circleMarker([d.lat, d.lon], {
+                radius: radius,
+                color: color,
+                weight: 1,
+                fillColor: color,
+                fillOpacity: opacity
+            });
+
+            const badgeClass = d.grade === 'DANGER' ? 'badge-danger' : (d.grade === 'WARNING' ? 'badge-warning' : 'badge-safe');
+            const popupHtml = `
+                <div class="popup-title">${d.route} ${d.km}km 지점</div>
+                <div class="popup-row"><span>위험도 등급:</span> <span class="popup-badge ${badgeClass}">${d.grade}</span></div>
+                <div class="popup-row"><span>예상 위험 지수:</span> <b>${d.risk}</b></div>
+                <div class="popup-row"><span>연간 정면역광:</span> <b>${d.glare_h} 시간</b></div>
+                <div class="popup-row"><span>출퇴근 정면역광:</span> <b>${d.commute_h} 시간</b></div>
+                <div class="popup-row"><span>동서축 정렬도:</span> <b>${d.ew}</b></div>
+                <div class="popup-row"><span>터널 최단거리:</span> <b>${d.tunnel_dist} km</b></div>
+            `;
+            marker.bindPopup(popupHtml);
+            markerGroup.addLayer(marker);
+            markers.push({ point: d, marker: marker });
+        });
+
+        // 특정 노선 선택 시 해당 영역으로 줌
+        if (selectedRoute !== 'ALL' && filtered.length > 0) {
+            const bounds = L.latLngBounds(filtered.map(d => [d.lat, d.lon]));
+            map.fitBounds(bounds, { padding: [40, 40] });
+        }
+    }
+
+    function renderRankList(items) {
+        const listEl = document.getElementById('rank-list');
+        listEl.innerHTML = '';
+        if (items.length === 0) {
+            listEl.innerHTML = '<div style="color:#6b7280; font-size:12px; text-align:center; padding:12px;">조건에 맞는 구간이 없습니다.</div>';
+            return;
+        }
+
+        items.forEach(d => {
+            const div = document.createElement('div');
+            div.className = 'rank-item';
+            div.innerHTML = `
+                <div>
+                    <span class="rank-route">${d.route}</span>
+                    <span class="rank-km">${d.km}km</span>
+                </div>
+                <div>
+                    <span class="rank-risk">${d.risk}</span>
+                </div>
+            `;
+            div.onclick = () => {
+                map.flyTo([d.lat, d.lon], 13, { duration: 0.8 });
+                const targetMarker = markers.find(m => m.point.route === d.route && m.point.km === d.km);
+                if (targetMarker) {
+                    targetMarker.marker.openPopup();
+                }
+            };
+            listEl.appendChild(div);
+        });
+    }
+</script>
+
+</body>
+</html>

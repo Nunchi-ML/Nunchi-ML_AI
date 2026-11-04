@@ -41,3 +41,9 @@ dist/
 
 # ML logs
 catboost_info/
+
+
+# 대용량 원천 소통 데이터 및 압축 파일
+VDS 소통/
+*.zip
+*.part*
