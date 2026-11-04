@@ -47,29 +47,30 @@ SETS = {"운전자 기준": ["sun_alt", "gap", "cloud", "sunshine"],
 MONO = {"sun_alt": 0, "gap": -1, "cloud": -1, "sunshine": 1, "u": 0, "v": 0, "in_fov": 1}
 
 
-def data():
+def data(*, weather_alignment="previous"):
     k = V.korea_with_sun()
     t = pd.concat([pd.read_csv(OUT / n)[["id", "captured_at_kst"]] for n in ("labels_drive.csv", "labels_dash.csv")]).drop_duplicates("id")
-    k = A.attach(k.merge(t, on="id"))
+    k = A.attach(k.merge(t, on="id"), alignment=weather_alignment)
     k = k[k.sun_alt.notna() & k.gap.notna() & k.cloud.notna()].reset_index(drop=True)
-    k = pd.concat([k, seoul()] + ([aihub()] if AIHUB else []), ignore_index=True)
+    k = pd.concat([k, seoul(weather_alignment=weather_alignment)]
+                  + ([aihub(weather_alignment=weather_alignment)] if AIHUB else []), ignore_index=True)
     k[["u", "v", "in_fov"]] = k[["u", "v", "in_fov"]].fillna({"u": 9, "v": -9, "in_fov": 0})   # 해가 뒤쪽 → 화면 밖
     return k
 
 
-def seoul():
+def seoul(*, weather_alignment="previous"):
     m = pd.read_csv(SEOUL / "labels_merged.csv")[["id", "majority"]].dropna()
     s = pd.read_csv(SEOUL / "label_set.csv").merge(m, on="id")
     s = s.merge(P.camera_params(s.id.tolist(), SEOUL)[["id", "focal", "width", "height"]], on="id")
     s["heading_suspect"] = False                                   # 세트를 만들 때 이미 뺌
     s = pd.concat([s.reset_index(drop=True), P.fov_features(s).reset_index(drop=True)], axis=1)
-    s = A.attach(s, stn=108)
+    s = A.attach(s, stn=108, alignment=weather_alignment)
     s = s.assign(label=s.majority.astype(int), camera="서울 폰",
                  group="se:" + s.model.fillna("?").astype(str) + " " + s.captured_at_kst.str[:10])
     return s[s.focal.notna() & s.cloud.notna()]
 
 
-def aihub():
+def aihub(*, weather_alignment="previous"):
     m = pd.read_csv(AIHUB_DIR / "labels_merged.csv")[["id", "file", "sequence", "majority"]].dropna()
     m["area"], m["drive_name"] = m.sequence.str.split("/").str[0], m.sequence.str.split("/").str[1]
     h = pd.read_csv(AIHUB_DIR / "drive_heading.csv")
@@ -79,7 +80,8 @@ def aihub():
     s = s.merge(pd.read_csv(AIHUB_DIR / "aihub_features.csv"), on="id")
     s = s.assign(focal=AIHUB_FOCAL, width=AIHUB_W, height=AIHUB_H, heading_suspect=False, captured_at_kst=s.time.str[:19])
     s = pd.concat([s.reset_index(drop=True), P.fov_features(s).reset_index(drop=True)], axis=1)
-    s = pd.concat([A.attach(g, stn=AIHUB_STN[a]) for a, g in s.groupby("area")], ignore_index=True)
+    s = pd.concat([A.attach(g, stn=AIHUB_STN[a], alignment=weather_alignment)
+                   for a, g in s.groupby("area")], ignore_index=True)
     s = s.assign(label=s.majority.astype(int), camera="AI Hub", group="ah:" + s.area + " " + s.captured_at_kst.str[:10])
     return s[s.heading.notna() & s.cloud.notna()]
 
@@ -103,7 +105,9 @@ def fmt(s):
 
 
 def main():
-    k = data()
+    k = data(weather_alignment=os.getenv("G_WEATHER_ALIGNMENT", "previous"))
+    print("Weather alignment:", k.weather_time_policy.unique().tolist(),
+          "| publication availability verified:", int(k.weather_availability_verified.sum()), "/", len(k))
     y = k.label.to_numpy()
     cams = tuple(k.camera.unique())
     print(f"사진 {len(k)}장 · " + " · ".join(f"{c} {int(k.camera.eq(c).sum())}" for c in cams)
