@@ -269,7 +269,7 @@ python notebooks/experiments/sun_visible_probe/temporal_priority_audit.py --obse
 
 ```powershell
 python notebooks/experiments/sun_visible_probe/label_reference_probe.py
-# 실제 Gemini 판정 CSV가 있을 때만 추가 (현재 미확보)
+# 실제 Gemini 판정 CSV를 별도로 준비했을 때만 추가
 python notebooks/experiments/sun_visible_probe/label_reference_probe.py --gemini-labels data/ai_label_review_20261104/labels_gemini.csv
 ```
 
@@ -287,7 +287,7 @@ python notebooks/experiments/sun_visible_probe/label_reference_probe.py --gemini
 
 상대12+도로12는 이47장의 세 기준에서 모두 가장 높았지만, 사람 기준 중간F1은0이며 심함 표본과 독립 촬영이 부족하다. AI 기준은 심함3장뿐이므로 재현율2/3 같은 수치를 일반화하지 않는다. 모델을 새 정답으로 재학습한 결과가 아니며 안정적인 최종모델/실제 운전자 시야 성능으로 해석하지 않는다. 사람–Claude만 공통인48장과 기준별 자체 수락 표본도 별도 보고해 표본2~3장이 빠진 영향을 구분했다. G를 포함한 과거 후보는 이50장에 필요한 시각/위치가 없어 재평가할 수 없다.
 
-**Gemini 실행 상태:** 사용자 요청으로 공식 npm 패키지 `@google/gemini-cli`를0.49.0→최신 안정0.66.0으로 업데이트·버전 확인했다. 이미지 없는 응답 점검도 개인용 Code Assist 인증의 `IneligibleTierError`로 실패했으므로 Gemini 판정은0장이고 결과를 생성하지 않았다. Google은 [2026-06-18부터 개인 계정 Gemini CLI Google-login 지원 종료](https://developers.google.com/gemini-code-assist/docs/deprecations/code-assist-individuals)를 공지했다(Pro/Ultra 포함). 공식 후속은 Antigravity CLI이며 별도 Gemini API 인증 경로도 있다. 현재 Antigravity CLI와 API/Vertex 환경 인증은 없고 사용자 인증 경로 확인이 필요하다. 토큰/로그인 설정은 임의 변경하지 않았다.
+**당시 Gemini 실행 상태:** 사용자 요청으로 공식 npm 패키지 `@google/gemini-cli`를0.49.0→최신 안정0.66.0으로 업데이트·버전 확인했다. 이미지 없는 응답 점검도 개인용 Code Assist 인증의 `IneligibleTierError`로 실패했으므로 Gemini 판정은0장이고 결과를 생성하지 않았다. Google은 [2026-06-18부터 개인 계정 Gemini CLI Google-login 지원 종료](https://developers.google.com/gemini-code-assist/docs/deprecations/code-assist-individuals)를 공지했다(Pro/Ultra 포함). 공식 후속은 Antigravity CLI이며 별도 Gemini API 인증 경로도 있다. 현재 Antigravity CLI와 API/Vertex 환경 인증은 없고 사용자 인증 경로 확인이 필요하다. 토큰/로그인 설정은 임의 변경하지 않았다.
 
 로컬 `data/ai_label_review_20261104/`에 답안 없는 사진묶음·블라인드매핑·고정 프롬프트·CLI 원시 오류·확정Codex JSON/CSV·provenance, `evaluation/`에 coverage·기준별 scores/혼동행렬/QWK/MAE·라벨일치도·같은ID대조·report가 있다. 사진/라벨/인증로그/매핑/전체예측은 공개하지 않는다. 공개 파일은 비교 실행기·테스트·설명만이다. 원본 라벨·운영모델/API 유지, 최종선정 보류.
 
@@ -332,6 +332,62 @@ python notebooks/experiments/sun_visible_probe/target_evidence_audit.py --observ
 
 사진·원본/AI라벨·관찰영역/매핑·전체 결과는 로컬 전용. 공개 파일은 코드/테스트/이 설명뿐이다. 미래 프레임은 모델 입력에 넣지 않는다. 다음은 고정 관찰 과제에서 중앙 사진 단독 AI 교차판정과 전후 보조 판정을 분리해 검토하는 것이다. 새등급 기준/학습 정답은 아직 미확정이다.
 
-### Antigravity 인증 후속
+### Antigravity 인증 후속 — 당시 연결 확인 기록
 
-2026-11-04 사용자 설치의 공식 Antigravity CLI1.5.0을 Google OAuth로 연결했다. 계정은 Google AI Plus로 표시됐고 Gemini3.8 Flash(High)의 도구 없는 응답점검에서 `READY`를 확인했다. 사용자 명시 선택으로 선택적 상호작용 데이터 수집을 끄고 초기 설정을 완료했다. [공식 인증 안내](https://antigravity.google/docs/install?tab=cli)의 개인 Google 계정 경로를 사용했으며 API키/Vertex로 우회하지 않았다. 로그인 확인은 이미지 라벨링 완료가 아니다. 현재 Gemini 이미지 판정0장이며 후속 실험 때 실제 모델/프롬프트/이미지 해시를 별도 보존한다. 인증코드·토큰·계정 식별정보는 저장소/문서에 넣지 않는다. 과거 Gemini CLI0.66의 Code Assist 인증 실패 기록은 당시 결과로 보존한다.
+2026-11-04 사용자 설치의 공식 Antigravity CLI1.5.0을 Google OAuth로 연결했다. 계정은 Google AI Plus로 표시됐고 Gemini3.8 Flash(High)의 도구 없는 응답점검에서 `READY`를 확인했다. 사용자 명시 선택으로 선택적 상호작용 데이터 수집을 끄고 초기 설정을 완료했다. [공식 인증 안내](https://antigravity.google/docs/install?tab=cli)의 개인 Google 계정 경로를 사용했으며 API키/Vertex로 우회하지 않았다. 로그인 확인은 이미지 라벨링 완료가 아니다. 인증 직후에는 Gemini 이미지 판정0장이었으며 후속 실험 때 실제 모델/프롬프트/이미지 해시를 별도 보존한다. 인증코드·토큰·계정 식별정보는 저장소/문서에 넣지 않는다. 과거 Gemini CLI0.66의 Code Assist 인증 실패 기록은 당시 결과로 보존한다.
+
+
+## Gemini 실제 교차판정: 중앙 사진과 전후 보조 조건
+
+`gemini_reference_probe.py`는 성진50사례를 각각 중앙 원본1장/중앙+±1·2초5장 조건으로 구성한다. 조건별 다른 무작위 순서와 C/V 가림 ID, 5사례씩 새 대화20개를 사용하며 정답·예측·원래 ID·영상 이름·Codex 수동 관찰은 입력 밖에 둔다. 원본 워터마크는 유지한다. 두 조건은 같은 Gemini 모델의 조건 비교이며 독립 판정자 두 명이 아니다.
+
+Antigravity CLI1.5.0의 `gemini-3.8-flash-high`를 사용한다. 최초 파일읽기 방식은 일부 지연/240초 제한에 걸려 진단 기록으로 분리했다. 본 실행은 [공식 ACP](https://antigravity.google/docs/cli/acp/)의 [이미지 콘텐츠 블록](https://agentclientprotocol.com/protocol/v1/content)으로 원본 JPEG 바이트를 직접 첨부한다. 로컬 도구·터미널 capability와 MCP 서버를 제공하지 않고 사용자 정의 규칙을 끈다. 명령/쓰기 거부, 선택적 수집/추가 유료 크레딧 사용 해제, 동시2묶음·새 요청 제한600초를 기록한다. 기존 캐시 인증을 사용하며 인증코드·토큰은 기록하지 않는다.
+
+`gemini_acp_transport.py`는 이미지 capability, 실제 모델, 완료된 turn, 첨부 이미지 해시/개수, 조건별5ID, 출력 스키마/원인 근거, 새 대화와 도구 미사용을 검사한다. 첨부 전달과 모델의 `pixels_viewed` 자기보고가 시각적 주의의 완전한 증명은 아니다. 최초 전후5건의 `used_offsets`가 보조 사진만 열거하여 중앙0이 빠졌으므로, 프롬프트에 없던 '전후 조건에도 반드시0 표기' 검사를 사후 제거했다. 원문 오프셋·등급은 수정하지 않았다. 이 메타데이터 변경과 시간 제한 연장은 별도 provenance에 보존하며 완료 응답 재호출 없이 원기록을 재감사하고 미시도 묶음만 이어갔다. 답안 내용에 따라 재시도/선택하지 않는다.
+
+차로 경계/통로·차량 존재/윤곽/위치·표지 존재/형태를 평가하고 대상 미확정을 정보 소실로 취급하지 않는다. 전후의 편집 전환/차량 이동은 같은 대상의 회복 근거와 구분한다. 보조 `reference_grade`는 기존 기준의 0=태양 눈부심 근거 없음,1=태양 근거 있으나 주요 대상 식별 가능,2=태양성 전방 정보의 뚜렷한 저하이며 불확실/후방/측면/비도로는 보류한다. 새 정보손실 등급 경계를 확정한 것이 아니다.
+
+```powershell
+python notebooks/experiments/sun_visible_probe/gemini_reference_probe.py prepare --out data/gemini_reference_20261104_v3 --inputs C:/path/to/empty-trusted-neutral/blind_inputs --transport acp_images
+python notebooks/experiments/sun_visible_probe/gemini_reference_probe.py run --out data/gemini_reference_20261104_v3
+# 완료 turn을 원응답으로 감사하고 미시도 묶음만 진행. 실패한 API 호출/유효 판정은 반복하지 않음.
+python notebooks/experiments/sun_visible_probe/gemini_reference_probe.py run --out data/gemini_reference_20261104_v3 --resume
+python notebooks/experiments/sun_visible_probe/gemini_reference_report.py --experiment data/gemini_reference_20261104_v3 --out data/gemini_reference_20261104_v3/report_v2
+```
+
+`gemini_reference_report.py`는 실제20묶음/100응답·50사례 조건별 매핑·원본/고정예측 해시를 검증해야 보고서를 만든다. 보류는 제외하고 세 기준(사람/중앙Gemini/전후Gemini), 다섯 기준(이전Claude/Codex 포함) 각각의 같은ID 교집합에서 고정한 모델 예측을 재채점한다. 기준별 자체 표본의 점수는 별도 표로 표시한다. Macro/Weighted F1·Accuracy·등급별 지표·혼동행렬·QWK·MAE, 기준 간 일치도·심각한 불일치, 중앙→전후 변화 및 대상별 상태를 남긴다. 학습·보정·임계값 선택·원본 정답 교체·최종선정은 하지 않는다.
+
+### 실제 결과 — 2026-11-04
+
+50사례×2조건 **100응답·20개 새 대화**를 완료했다. 중앙50장+전후250장 첨부 전달을 검증했고 원본250JPEG/라벨/예측 해시는 그대로다. 전후 조건의 처음5건도 원응답 재감사로 포함했으며 API 재호출은 없다. 진단용 이전 파일읽기5건은 주 비교에서 제외한다. 정본은 로컬 `data/gemini_reference_20261104_v3/report_v2/`, 이전 `report_v1`은 같은 점수의 초기 표로 보존한다.
+
+| 기준 | 수락 / 보류 | 정상 / 중간 / 심함 |
+|---|---|---|
+| 사람 | 50 / 0 | 32 / 8 / 10 |
+| 이전 Claude | 48 / 2 | 29 / 16 / 3 |
+| 이전 Codex | 48 / 2 | 32 / 13 / 3 |
+| Gemini 중앙 | 45 / 5 | 22 / 23 / 0 |
+| Gemini 전후 보조 | 45 / 5 | 24 / 21 / 0 |
+
+두 조건의 보류는 같은 후방4·비도로1사례다. 모두 수락한45장에서 중앙↔전후 일치41/45=91.11%, 카파 .8225, 등급변화4건(0→1 한 건,1→0 세 건). 사람과는 중앙66.67%·카파 .4587·QWK .6460, 전후62.22%·카파 .3672·QWK .6034로 전후 보조가 사람과의 일치를 높이지 않았다. 사람의 심함10장 모두 두Gemini에서 중간이었다. 모든 기준 쌍에서0↔2 불일치는0건이나 심함 경계의 일치/정확도를 입증하지 않는다.
+
+같은45장의 고정 상대+도로LR: 사람 Macro F1 .4569, Gemini중앙 .3457, 전후 .3810. 사람 혼동행렬은 `[[22,4,1],[8,0,0],[2,3,5]]`(행 정답·열 예측), 중간8장은 모두 정상누락·심함5/10포착. Gemini에는 심함 정답0장이므로 심함 재현율을 평가할 수 없다. 파일의 심함 recall/F1=0은 `zero_division=0` 표기이며 심함 검증 성공/실패 실측으로 읽지 않는다.
+
+다섯 기준이 모두 수락한 **동일43장**, 아래는 고정 예측의 3클래스 Macro F1이다. 모든 표에서 클래스0/1/2를 유지한다.
+
+| 고정 방법 | 사람 | Claude | Codex | Gemini 중앙 | Gemini 전후 |
+|---|---:|---:|---:|---:|---:|
+| 화면12 LGB | 0.3492 | 0.5417 | 0.3535 | 0.3510 | 0.3591 |
+| 화면+도로 LGB | 0.2979 | 0.3525 | 0.3347 | 0.3174 | 0.3530 |
+| 상대12 LR | 0.2226 | 0.3429 | 0.4061 | 0.4165 | 0.3993 |
+| 상대+도로 LR | 0.4722 | 0.5493 | 0.6037 | 0.3464 | 0.3827 |
+| 도로12 LR | 0.3853 | 0.3011 | 0.4497 | 0.2007 | 0.2318 |
+| 항상 정상 | 0.2451 | 0.2388 | 0.2685 | 0.2116 | 0.2323 |
+
+**판단:** 정답 버전에 따라 후보 순위까지 바뀐다. Gemini 심함0장·사람 심함10장의 차이를 근거로 사람의 오판을 단정하거나 정답을 AI로 교체하지 않는다. 전후 추가도 등급 신뢰성 개선을 입증하지 못했다. 기존320장CV .6229와 다른 표본·입력·라벨의 점수이며 새학습 성능 개선/최종선정은 없다.
+
+전후 보조의 대상 상태 변화는 차로2·차량1·표지7사례이며 태양 근거는7사례 바뀌었다. 이전 Codex 관찰과도 전방 범위44vs45·표지 식별11vs34/31처럼 적용 과제가 다를 수 있다. 같은 기준의 정확도 비교가 아니다. 완료 후 T012/T049/T022 중앙 사진을 직접 점검했으며 밝은 영역/점무늬 광학 효과의 태양 원인 단정, 사진 밖 해 원반 주장, 보도에서 보는 측면 장면의 전방 포함은 추가 감사 대상이다. 원 AI 판정은 수정하지 않았다. 이 검토는 결과를 아는 Codex의 사후 QA이며 새 정답이 아니다.
+
+`disagreement_review.html`은 사람 심함·조건 변화·보류 사례를 먼저 펼치고 전체50사례 원본/전후 링크와 두 판단 근거를 제공하는 **답안 포함 분석자용** 페이지다. 100주석·250사진 링크·전체180개 테스트를 검증했다. 원본/AI라벨/매핑/원응답/사진/전체예측/인증정보는 공개하지 않는다.
+
+다음 우선순위는 기존 사람 심함10장·조건변화4건·장면/표지 범위 차이를 고정 과제/대상 위치와 연결해 감사하고, '태양 근거'와 '전방 식별 저하'의 축을 분리해 등급 경계 후보를 문서화하는 것이다. 이50장을 새 독립 시험으로 주장하거나 AI 다수결로 심함을 지우지 않는다. 성진 표본으로 계속 진행하되 원본 라벨·운영모델/API·최종선정 보류를 유지한다.
