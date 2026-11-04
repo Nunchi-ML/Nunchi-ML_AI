@@ -12,6 +12,7 @@
 """
 import argparse
 import csv
+import json
 import random
 import shutil
 from pathlib import Path
@@ -48,7 +49,8 @@ def main():
     a = ap.parse_args()
     rng = random.Random(a.seed)
     pack = a.root / "label_pack"
-    shutil.rmtree(pack, ignore_errors=True)
+    if pack.exists():
+        raise FileExistsError("Existing label_pack must be preserved; never regenerate IDs or overwrite answers")
     (pack / "images").mkdir(parents=True)
     rows, used = [], set()
     for vdir in sorted(p for p in a.root.iterdir() if p.is_dir() and p.name != "label_pack"):
@@ -83,7 +85,11 @@ def main():
         w.writerow(["id", "sequence", "video", "t"])
         for r in rows:
             w.writerow([r["id"], r["sequence"], r["video"], r["t"]])
-    shutil.copy(TOOL, pack / "label_tool.html")
+    blind = [dict(no=i, id=r["id"], file=r["file"], sequence=r["sequence"]) for i, r in enumerate(rows, 1)]
+    html = TOOL.read_text(encoding="utf-8").replace(
+        '<script id="embeddedRows" type="application/json">[]</script>',
+        '<script id="embeddedRows" type="application/json">' + json.dumps(blind, ensure_ascii=True) + '</script>')
+    (pack / "label_tool.html").write_text(html, encoding="utf-8")
     # 영상 제목(예: "역광 영상")이 라벨에 힌트가 되므로 출처표는 라벨 묶음에 넣지 않는다 (분석자 폴더에만 둠).
     print(f"총 {len(rows)}장 → {pack} (영상 {len(set(r['video'] for r in rows))}개). 라벨러에게는 label_pack 폴더만 준다.")
 
