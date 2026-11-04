@@ -302,6 +302,36 @@ python notebooks/experiments/glare_video_source/g_weather_time_probe.py --snapsh
 
 사진·라벨·기하를 고정한 스냅샷은 로컬/git 제외 파일이다. 다른 데이터로 재현할 때는 같은 입력 열의 CSV와 ASOS 캐시를 준비한다. 출력은 점수, 사진별 예측, 결합 시각, 입력/캐시 해시·실행 환경이며 raw CSV와 결과를 Git에 올리지 않는다. 다음 단계는 카메라 투영·왜곡·기울기 점검이다.
 
+### 카메라 투영 점검 (2026-11-04, 2단계)
+
+기존 `fov_features()`는 perspective 식을 모든 사진에 적용하고 왜곡계수·회전을 사용하지 않았다. `nunchi_ml.camera`에 [OpenSfM perspective/fisheye와 픽셀 좌표계](https://opensfm.org/docs/geometry.html), AI Hub의 Brown 내부 보정을 구현했다. 기존 v 식에는 이미 `cos(방위차)` 보정이 있었으며 이번에 새로 추가한 항이 아니다. 픽셀 중심을 기준으로 보정한 뒤 G의 이미지 가장자리 ±1 좌표로 바꾼다.
+
+- Mapillary 메타데이터 344장 확보, 고정 비교에 들어가는 320장은 perspective309/fisheye11. 그중 306장에 0이 아닌 왜곡계수가 있고, focal은 기존 캐시와 모두 같다. 344장 모두 EXIF orientation1. 다른 orientation·미지원 카메라·누락/비유한 보정값은 오류로 처리한다. 임의의 0 보정을 넣지 않는다.
+- 렌즈만 보정한 `calibrated`와 추정 회전까지 적용한 `pose`를 분리한다. 회전은 [Mapillary angle-axis 메타데이터](https://mapillary.github.io/mapillary-js/api/interfaces/api.SpatialImageEnt/)와 [ENU→카메라 변환](https://github.com/mapillary/mapillary-js/blob/main/src/geo/Geo.ts)에 맞췄다. 320장의 회전 유래 방위각과 기존 방위각은 수치 오차 내 일치하지만 기울기는 사진 기반 SfM 추정값이다. 실측 자세/휴대폰 센서 검증으로 취급하지 않는다.
+- AI Hub 304장은 사진별 `calib.txt`의 fx/fy/cx/cy/k1/k2/p1/p2만 읽는다(33파일에서 같은 내부 보정값 확인). **라이다↔카메라 외부 보정값은 ENU 자세가 아니다.** AI Hub의 자세는 `level_assumed`다.
+- 뒤/정측면 광선은 각도를 억지로 앞쪽에 자르지 않고 투영 불가로 표시한다. G 비교에서만 기존 화면 밖 sentinel(u=9,v=-9,in_fov=0)을 명시적으로 쓴다. `pinhole`은 렌즈 보정 없이 이 처리만 바꾸는 대조군이다. 물리적 수평선 아래여도 기울어진 카메라의 영상 안이면 `in_fov=1`이 가능하다. 투영 버전·보정·회전 유래 광선을 포함한 캐시 지문을 남기며 기존 밝기 캐시를 재사용하지 않는다.
+
+고정 624장(학습320/24촬영묶음 + 재사용 AI Hub304/3묶음), previous 날씨, 동일 5겹×30분할·균형 로지스틱·G6개·0.5/0.5 기준:
+
+| 투영 | 촬영 CV F1 | 심함 정밀도 / 재현율 | AI Hub F1 / 정상 헛알림 |
+|---|---|---|---|
+| legacy | 0.543 | 0.390 / 0.693 | 0.182 / 83.0% |
+| pinhole (화면 밖 처리만) | 0.539 | 0.393 / 0.748 | 0.176 / 84.0% |
+| calibrated (렌즈만) | 0.572 | 0.396 / 0.749 | 0.176 / 84.0% |
+| pose (렌즈 + SfM 회전) | 0.529 | 0.370 / 0.638 | 0.182 / 83.0% |
+
+렌즈 보정의 CV F1 차이 평균 +0.029, 30분할 중25회 양수이나 범위 −0.077~+0.140. 반복 분할은 독립 표본/유의성 검정이 아니다. 카메라 제외 F1(도로 광각/블랙박스/서울 폰)은 legacy .538/.202/.380 → calibrated .403/.224/.410으로 일관된 개선이 아니다. 심함73장 중71장이 같은 날 블랙박스에 몰린 한계도 유지된다. **새 최종 모델 채택 근거는 부족하다.** 기존 G 로더는 legacy 기본값을 유지하고 운영 모델/API는 바꾸지 않는다.
+
+사진 표시 검토에서도 AI Hub 일부는 보정 후 좌표와 실제 보이는 해가 어긋났다. 원인은 시간·방향·미확인 자세 등을 함께 검증해야 하며 렌즈 오류만으로 단정하지 않는다. 해 픽셀 중심/가림·도로 식별성 보조 라벨이 다음 우선순위다. 투영 좌표를 검증하기 전 그 주변 밝기 특징으로 일반화 개선을 주장하지 않는다.
+
+오프라인 재현(사진은 점수 계산에 불필요, 원본 JSON·calib·CSV는 git 제외):
+
+```bash
+python notebooks/experiments/glare_video_source/g_camera_probe.py --snapshot data/analysis_20261104/model2_snapshot.csv --metadata-dir data/analysis_20261104/step2_camera/metadata --out data/analysis_20261104/step2_camera/results
+```
+
+출력: 분할별 점수·사진별 예측, 모드별 좌표/자세출처/캐시 지문, 입력·날씨·보정·실행 소스 해시. 같은 사진/분할을 유지하고 결측 행을 임의로 버리지 않는다. 새 독립 검증 데이터가 아니다. 직접 투영은 `fov_features(d, projection="calibrated"|"pose")`로 명시적으로 선택하며 보정 열을 준비해야 한다. 기존 캐시 업그레이드는 `camera_params(ids, metadata_dir=Path(...))`로 로컬 JSON을 읽거나 `refresh_calibration=True`로 API를 명시적으로 호출한다. 둘 다 캐시를 갱신하며 일반 호출은 이미 있는 캐시에 추가 요청을 하지 않는다. 재현 스크립트는 캐시를 수정하거나 외부 요청을 하지 않는다.
+
 ## 라벨
 
 1. `label_tool.html` 을 크롬으로 열기 (더블클릭) → `data/glare_mapillary` 폴더 고르기 → 이름 적기
