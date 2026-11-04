@@ -71,6 +71,38 @@ python notebooks/experiments/sun_visible_probe/new_camera_eval.py --pack data/ne
 
 결과 폴더의 `report.json`에 라벨 근거·합의 기준·입력/소스 해시·환경·규칙 문턱·통계 구간, `scores.csv`·`per_video.csv`·`predictions.csv`·`paired_accuracy.csv`·`label_review.csv`에 전체 결과를 기록한다. 두 사람 중 한 명만 답했거나 제외한 행, 불일치 행은 합의 성적에 넣지 않는다. 평가 후 모델/문턱을 바꾸면 같은 시험을 새 독립 검증이라고 부르지 않는다.
 
+## 누적 이진분류·2등급 비교 — 2026-11-04
+
+사용자 지시로 **성능 개선이 검증될 때까지 최종 모델 결정은 보류**한다. 기존 G와 .623 두 단계는 비교 기준이며 최종 확정 모델로 취급하지 않는다. 딥러닝을 사용하지 않는다.
+
+`nunchi_ml.glare.ordinal.CumulativeOrdinalClassifier`는 A=`y>=1`, B=`y>=2`를 각각 전체 학습 행으로 학습한다. `q1<q2`인 행은 두 값을 평균으로 풀링하는 최소제곱 등위회귀 투영을 적용한다. `[1-q1, q1-q2, q2]`의 argmax가 최종 등급이다. 원본 누적확률은 별도로 저장해 위반율과 각 이진분류기의 성능을 진단한다. 단일 클래스만 남은 학습 폴드는 상수 예측기로 처리하고 피처 이름·순서와 finite 입력을 검사한다. 기존 스케일링 Pipeline도 각 학습 폴드 안에서 fit한다.
+
+```powershell
+# 추가 알고리즘은 실험용 optional dependency, 운영 패키지 설치에 강제하지 않음
+pip install -e ".[ordinal]"
+
+# 기본 비교: 기존 320장/24촬영그룹, 같은 5겹×30회 + 카메라 제외 + 재사용 AI Hub
+python notebooks/experiments/sun_visible_probe/ordinal_compare.py --out data/ordinal_20261104/primary30 --weighting balanced
+
+# 추가 픽셀 특징/불균형 보정 비교. 별도 새 out 필요. 반복 수가 다르면 같은 seed끼리만 비교
+python notebooks/experiments/sun_visible_probe/ordinal_compare.py --out data/ordinal_20261104/ablation5 --features g_rel g_rel_extra --weighting balanced none --repeats 5 --only-cv
+
+# Optuna: 외부 fold의 학습 행만 안쪽 GroupKFold 3개로 나눠 A/B/다중분류 각각 최대2 trials
+python notebooks/experiments/sun_visible_probe/ordinal_compare.py --out data/ordinal_20261104/nested_lgbm --families lightgbm --weighting balanced --trials 2 --workers 1
+
+# 기존의 '심함은 G만' 입력을 유지한 진짜 누적분류 추가 대조. 전체 학습 행에서 B를 학습
+python notebooks/experiments/sun_visible_probe/ordinal_severity_control.py --manifest data/ordinal_20261104/primary30/feature_manifest.csv --out data/ordinal_20261104/severity_control
+```
+
+- `.623`은 Accuracy가 아니라 기존 두 단계의 **320장 촬영 GroupKFold 5×30, 3등급 Macro F1 평균**이다. 기존 .5/.5 판정과 argmax 대조를 함께 기록한다. 새 다중분류/누적분류는 모두 argmax로 공정 비교한다.
+- 이번30회 결과(Macro F1): 기존 두단계 .6229, CatBoost 다중 .4208→누적 .4421, XGBoost .4279→.4319, LightGBM .4477→.4647. 동일가중 누적 앙상블 .4558, 내부 Optuna2 trials LightGBM 누적 .4660, 심함 입력 G-only 로지스틱 누적 대조 최고 .5999. **.623 개선을 확인하지 못했으므로 최종 결정 보류.** 상세 등급별 지표·혼동행렬은 로컬 `data/ordinal_20261104/report.html`과 `combined_summary.csv`에 있다.
+- 원본 스냅샷·사진·previous 날씨 결합을 유지하고 ID 일대일 매칭, 실제 사진 바이트 및 상대12 캐시의 재계산 일치를 확인한다. 평가용 카메라/촬영 ID를 피처에 넣지 않는다.
+- `ordinal_image_features.py`는 평균·표준편차·P90/95/99·밝은 면적·배경 대비·중심·국소 대비·8구간 히스토그램을 사진별로만 계산한다. **정규화 픽셀 통계이며 물리적 휘도/조도나 센서 측정값이 아니다.** 배포 `features.py`를 바꾸지 않는다.
+- `scores.csv`: Macro/Weighted F1, Accuracy, 등급별 P/R/F1, QWK, MAE, 0→2/2→0 건수, 혼동행렬. `threshold_scores.csv`: A/B 성능·Brier/log loss·단조성 위반. `predictions.csv`: 원본 q1/q2와 보정 후 클래스 확률. `splits.csv`·`parameters.json`·`method.json`: 분할·내부 튜닝 파라미터·입력/소스 해시·환경·완료 상태.
+- `binary_scores.csv`는 0 vs 1·2 직접 분류(A, 보정 전 q1≥.5)와 3등급 결과를 합친 판정을 **같은 이진 과제**에서 비교한다. 2등급 F1을 3등급 .623과 직접 비교하지 않는다. 앙상블은 세 모델의 보정 후 클래스 확률을 같은 가중치로 평균하며 검증 라벨로 가중치를 고르지 않는다.
+- 기본 파라미터는 기존 LightGBM 200 trees/learning rate .05/leaves7/min child5를 재사용한다. 기존 최적값이 없는 CatBoost/XGBoost는 200 trees/depth3/.05의 작은 탐색 기준이다. `--trials`는 0(고정) 또는 2~8로 제한한다. 각 이진 모델의 balanced 가중치는 해당 학습 표에서 따로 계산한다.
+- 확률 보정(calibration), PCA, 자동 피처 선택, 외부 검증 라벨을 사용한 임계값 최적화는 이번 기본 비교에서 수행하지 않는다. 겹치는 30회 CV는 독립 신뢰구간이 아니다. AI Hub는 재사용 개발/스트레스 시험이고, 성진50장에는 G 시각/위치 입력이 없어 이 혼합 입력 모델을 평가하거나 튜닝하지 않는다. 4등급은 새로운 정의·사람 판정 없이 만들어내지 않는다.
+
 ## 한계 (알고 쓴다)
 - 사람이 판정한 해 가시성 · 가림 정답이 없는 **대리 특징**이다. 새 카메라에서 해가 보일 때의 재현율은 증명되지 않았다 (96장 블라인드 검수 판정 전).
 - **도로 광각 카메라에서는 나빠진다** (알림정확도 .86 → .84, 헛알림 22% → 39%). 포화된 하늘 가장자리를 해로 오인하는 사례가 있다 (PR #16 시각 검토).
