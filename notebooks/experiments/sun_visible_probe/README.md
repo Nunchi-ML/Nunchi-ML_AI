@@ -103,6 +103,25 @@ python notebooks/experiments/sun_visible_probe/ordinal_severity_control.py --man
 - 기본 파라미터는 기존 LightGBM 200 trees/learning rate .05/leaves7/min child5를 재사용한다. 기존 최적값이 없는 CatBoost/XGBoost는 200 trees/depth3/.05의 작은 탐색 기준이다. `--trials`는 0(고정) 또는 2~8로 제한한다. 각 이진 모델의 balanced 가중치는 해당 학습 표에서 따로 계산한다.
 - 확률 보정(calibration), PCA, 자동 피처 선택, 외부 검증 라벨을 사용한 임계값 최적화는 이번 기본 비교에서 수행하지 않는다. 겹치는 30회 CV는 독립 신뢰구간이 아니다. AI Hub는 재사용 개발/스트레스 시험이고, 성진50장에는 G 시각/위치 입력이 없어 이 혼합 입력 모델을 평가하거나 튜닝하지 않는다. 4등급은 새로운 정의·사람 판정 없이 만들어내지 않는다.
 
+## 후속: 촬영 그룹 내부 확률 보정
+
+`CumulativeOrdinalClassifier(..., calibration="sigmoid").fit(X, y, groups=capture_groups)`로 선택적으로 사용한다. `CalibratedClassifierCV(ensemble=False)`가 각 바깥 학습 표 안의 GroupKFold3 OOF 예측만으로 보정하고, 기본 모델은 바깥 학습 표 전체로 다시 fit한다. `FoldWeightedClassifier`가 balanced 가중치를 각 **내부 학습 fold**에서 다시 계산하므로 내부 검증 라벨이 가중치에 유입되지 않는다. 보정 후에도 q1≥q2 투영·argmax를 적용한다. 기본값은 보정 없음이며 기존 예측을 유지한다. 그룹이 없거나2개 미만이면 보정은 거부한다. 근거: [scikit-learn 확률 보정 문서](https://scikit-learn.org/stable/modules/calibration.html).
+
+```powershell
+# 원래 학습 조건: 같은320장 그룹 CV + 카메라 제외 + 재사용 AI Hub
+python notebooks/experiments/sun_visible_probe/ordinal_calibration_probe.py --out data/ordinal_20261104/calibration30
+
+# 별도 데이터 추가 조건: AI Hub304장을 학습에 포함, 검증320장·분할은 그대로
+# 이 조건의 AI Hub는 학습 데이터이며 AI Hub 시험 점수를 계산하지 않음
+python notebooks/experiments/sun_visible_probe/ordinal_calibration_probe.py --out data/ordinal_20261104/calibration_augmented30 --augment-aihub
+```
+
+LightGBM·로지스틱·G-only 심함 입력 대조에서 raw/학습prior복원/group sigmoid를 비교한다. prior복원은 균형 가중치를 학습 클래스 비율로 대수적으로 되돌리는 대조이며 보정 성공을 보장하지 않는다. 별도 기존 두단계 대조에서는 내부 그룹 OOF만으로49개 임계값 조합을 비교한다. 누적분류의 argmax와 이 조건부 두단계 임계값 판정을 구분해서 기록한다. 결과는 `report.html`, `summary.csv`, `probability_summary.csv`, `binary_summary.csv`, `scores.csv`(등급별 지표·혼동행렬), `thresholds.csv`, `calibration_audit.csv`(내부 그룹/희소 클래스), `predictions.csv`, `splits.csv`, `method.json`, 실행 당시 바이트를 보존한 `source_snapshot/`에 있다. 중단·실패 상태도 기록한다.
+
+30회 결과: 원래 학습 조건의 LightGBM 누적 Macro F1 .4647→group sigmoid .4562, 로지스틱 .5147→.4817, G-only 심함 대조 .5968→.4763. sigmoid 후 심함재현율은 모두0이었다. 기존 두단계 임계값 내부선택도 .6229→.4984로 악화했다. AI Hub304장 추가학습 조건은 같은 검증320장·분할에서 기존 두단계 .4133, G-only 심함 대조 .4965로 개선을 확인하지 못했다. 상세 비교는 로컬 `calibration_comparison.html`. 최종 모델 결정 보류를 유지한다.
+
+확률 오차(Brier/log loss), 심함 재현율, Macro F1을 함께 확인한다. 보정이 F1 향상을 보장하지 않으며 데이터 추가 효과를 누적분류 알고리즘 효과로 해석하지 않는다. **현재 사용자 기준은 성진50장 단일 판정이며 추가 판정자를 실험 진행 조건으로 두지 않는다.** 다인 합의 정답/새 독립시험으로 해석하지 않는 한계와, 다른 촬영의 심함 표본 편중은 유지한다. 운영 모델·원본 라벨·분할을 바꾸거나 AI Hub 학습 성적을 외부 검증으로 보고하지 않는다.
+
 ## 한계 (알고 쓴다)
 - 사람이 판정한 해 가시성 · 가림 정답이 없는 **대리 특징**이다. 새 카메라에서 해가 보일 때의 재현율은 증명되지 않았다 (96장 블라인드 검수 판정 전).
 - **도로 광각 카메라에서는 나빠진다** (알림정확도 .86 → .84, 헛알림 22% → 39%). 포화된 하늘 가장자리를 해로 오인하는 사례가 있다 (PR #16 시각 검토).
