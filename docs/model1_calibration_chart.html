@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>A-GLM 5-Fold OOF 5분위수 캘리브레이션 다이어그램</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0f172a; color: #f8fafc; margin: 0; padding: 24px; }
+  .card { max-width: 860px; margin: 0 auto; background: #1e293b; border-radius: 12px; padding: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.4); }
+  h2 { margin-top: 0; font-size: 20px; color: #38bdf8; display: flex; align-items: center; gap: 8px; }
+  p.desc { font-size: 14px; color: #94a3b8; line-height: 1.6; }
+  table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 13px; }
+  th, td { padding: 10px 12px; text-align: right; border-bottom: 1px solid #334155; }
+  th { background: #0f172a; color: #cbd5e1; font-weight: 600; }
+  td:first-child, th:first-child { text-align: left; }
+  .badge-warn { background: rgba(239, 68, 68, 0.2); color: #f87171; padding: 2px 6px; border-radius: 4px; font-size: 11px; }
+  .badge-ok { background: rgba(34, 197, 94, 0.2); color: #4ade80; padding: 2px 6px; border-radius: 4px; font-size: 11px; }
+  .badge-sparse { background: rgba(234, 179, 8, 0.2); color: #facc15; padding: 2px 6px; border-radius: 4px; font-size: 11px; }
+  .svg-container { margin-top: 24px; background: #0b1120; border-radius: 8px; padding: 16px; border: 1px solid #334155; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h2>📊 A-GLM 5-Fold OOF 국소 캘리브레이션 검증도 (Predicted vs Observed)</h2>
+  <p class="desc">
+    단변량 Poisson GLM의 5-Fold 교차검증 예측값(x축)과 실제 구간당 사고 발생률(y축)을 비교한 도표입니다.
+    회색 점선은 완벽한 캘리브레이션(\(y = x\))을 나타내며, 수직 막대는 <strong>Exact Poisson 95% 신뢰구간</strong>입니다.
+  </p>
+
+  <div class="svg-container">
+    <svg viewBox="0 0 700 420" width="100%" height="auto">
+      <!-- Grid & Axis -->
+      <line x1="80" y1="350" x2="660" y2="350" stroke="#475569" stroke-width="1.5" />
+      <line x1="80" y1="350" x2="80" y2="30" stroke="#475569" stroke-width="1.5" />
+      
+      <!-- Axis Labels -->
+      <text x="370" y="395" fill="#94a3b8" font-size="12" text-anchor="middle">A-GLM 5-Fold OOF 예측 사고건수 (평균, 건/km)</text>
+      <text x="25" y="190" fill="#94a3b8" font-size="12" text-anchor="middle" transform="rotate(-90 25 190)">실제 관측 사고건수 (건/km)</text>
+      
+      <!-- Ideal 45-degree Line (Scaled: (0,0) -> (80,350), (0.06, 0.06) -> (640, 50)) -->
+      <!-- x_scale: x -> 80 + (x / 0.06) * 560 -->
+      <!-- y_scale: y -> 350 - (y / 0.06) * 300 -->
+      <line x1="80" y1="350" x2="640" y2="50" stroke="#64748b" stroke-width="1.5" stroke-dasharray="6,4" />
+      <text x="645" y="45" fill="#64748b" font-size="11">이상선 (y = x)</text>
+
+      <!-- 1분위 Error Bar -->
+      <line x1="107.74852661267468" y1="349.8922646468754" x2="107.74852661267468" y2="326.29087918749406" stroke="#facc15" stroke-width="2" />
+      <line x1="102.74852661267468" y1="349.8922646468754" x2="112.74852661267468" y2="349.8922646468754" stroke="#facc15" stroke-width="2" />
+      <line x1="102.74852661267468" y1="326.29087918749406" x2="112.74852661267468" y2="326.29087918749406" stroke="#facc15" stroke-width="2" />
+      <!-- Point -->
+      <circle cx="107.74852661267468" cy="345.74468085106383" r="5" fill="#facc15" />
+      <text x="115.74852661267468" y="349.74468085106383" fill="#f8fafc" font-size="11">1분위 (0.29x)</text>
+
+      <!-- 2분위 Error Bar -->
+      <line x1="116.7822108743456" y1="348.96047519938213" x2="116.7822108743456" y2="318.9927567908843" stroke="#facc15" stroke-width="2" />
+      <line x1="111.7822108743456" y1="348.96047519938213" x2="121.7822108743456" y2="348.96047519938213" stroke="#facc15" stroke-width="2" />
+      <line x1="111.7822108743456" y1="318.9927567908843" x2="121.7822108743456" y2="318.9927567908843" stroke="#facc15" stroke-width="2" />
+      <!-- Point -->
+      <circle cx="116.7822108743456" cy="341.41630901287556" r="5" fill="#facc15" />
+      <text x="124.7822108743456" y="345.41630901287556" fill="#f8fafc" font-size="11">2분위 (0.44x)</text>
+
+      <!-- 3분위 Error Bar -->
+      <line x1="143.8198485784647" y1="313.1123946451351" x2="143.8198485784647" y2="208.5357227537094" stroke="#f87171" stroke-width="2" />
+      <line x1="138.8198485784647" y1="313.1123946451351" x2="148.8198485784647" y2="313.1123946451351" stroke="#f87171" stroke-width="2" />
+      <line x1="138.8198485784647" y1="208.5357227537094" x2="148.8198485784647" y2="208.5357227537094" stroke="#f87171" stroke-width="2" />
+      <!-- Point -->
+      <circle cx="143.8198485784647" cy="273.0769230769231" r="5" fill="#f87171" />
+      <text x="151.8198485784647" y="277.0769230769231" fill="#f8fafc" font-size="11">3분위 (2.25x)</text>
+
+      <!-- 4분위 Error Bar -->
+      <line x1="300.9215401850885" y1="248.49110320250293" x2="300.9215401850885" y2="135.22133703707294" stroke="#38bdf8" stroke-width="2" />
+      <line x1="295.9215401850885" y1="248.49110320250293" x2="305.9215401850885" y2="248.49110320250293" stroke="#38bdf8" stroke-width="2" />
+      <line x1="295.9215401850885" y1="135.22133703707294" x2="305.9215401850885" y2="135.22133703707294" stroke="#38bdf8" stroke-width="2" />
+      <!-- Point -->
+      <circle cx="300.9215401850885" cy="199.54864593781343" r="5" fill="#38bdf8" />
+      <text x="308.9215401850885" y="203.54864593781343" fill="#f8fafc" font-size="11">4분위 (1.27x)</text>
+
+      <!-- 5분위 Error Bar -->
+      <line x1="585.9319661870009" y1="176.8112729836221" x2="585.9319661870009" y2="36.559496787126534" stroke="#38bdf8" stroke-width="2" />
+      <line x1="580.9319661870009" y1="176.8112729836221" x2="590.9319661870009" y2="176.8112729836221" stroke="#38bdf8" stroke-width="2" />
+      <line x1="580.9319661870009" y1="36.559496787126534" x2="590.9319661870009" y2="36.559496787126534" stroke="#38bdf8" stroke-width="2" />
+      <!-- Point -->
+      <circle cx="585.9319661870009" cy="114.29287863590773" r="5" fill="#38bdf8" />
+      <text x="593.9319661870009" y="118.29287863590773" fill="#f8fafc" font-size="11">5분위 (0.87x)</text>
+
+    </svg>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>분위</th>
+        <th>구간수 (N)</th>
+        <th>평균 예측 (건/km)</th>
+        <th>실제 관측 (건/km)</th>
+        <th>실제 사고수</th>
+        <th>관측/예측 비율</th>
+        <th>95% 신뢰구간 (비율)</th>
+        <th>상태</th>
+      </tr>
+    </thead>
+    <tbody>
+
+      <tr>
+        <td><strong>1분위</strong></td>
+        <td>1,175개</td>
+        <td>0.00297</td>
+        <td>0.00085</td>
+        <td>1건</td>
+        <td><strong>0.29배</strong></td>
+        <td>[0.01, 1.59]</td>
+        <td><span class="badge-sparse">표본 희소 (CI 광범위)</span></td>
+      </tr>
+
+      <tr>
+        <td><strong>2분위</strong></td>
+        <td>1,165개</td>
+        <td>0.00394</td>
+        <td>0.00172</td>
+        <td>2건</td>
+        <td><strong>0.44배</strong></td>
+        <td>[0.05, 1.57]</td>
+        <td><span class="badge-sparse">표본 희소 (CI 광범위)</span></td>
+      </tr>
+
+      <tr>
+        <td><strong>3분위</strong></td>
+        <td>650개</td>
+        <td>0.00684</td>
+        <td>0.01538</td>
+        <td>10건</td>
+        <td><strong>2.25배</strong></td>
+        <td>[1.08, 4.14]</td>
+        <td><span class="badge-warn">유의미한 과소예측</span></td>
+      </tr>
+
+      <tr>
+        <td><strong>4분위</strong></td>
+        <td>997개</td>
+        <td>0.02367</td>
+        <td>0.03009</td>
+        <td>30건</td>
+        <td><strong>1.27배</strong></td>
+        <td>[0.86, 1.81]</td>
+        <td><span class="badge-ok">양호 적합</span></td>
+      </tr>
+
+      <tr>
+        <td><strong>5분위</strong></td>
+        <td>997개</td>
+        <td>0.05421</td>
+        <td>0.04714</td>
+        <td>47건</td>
+        <td><strong>0.87배</strong></td>
+        <td>[0.64, 1.16]</td>
+        <td><span class="badge-ok">양호 적합</span></td>
+      </tr>
+
+    </tbody>
+  </table>
+</div>
+</body>
+</html>
