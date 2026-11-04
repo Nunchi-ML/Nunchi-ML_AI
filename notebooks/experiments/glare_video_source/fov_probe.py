@@ -3,7 +3,7 @@
 Mapillary 가 사진마다 계산해 주는 초점거리(camera_parameters[0], 긴 변 대비) → 가로 · 세로 화각.
 카메라가 수평 · 진행 방향을 본다고 보고, 해를 화면에 투영한 위치:
     u = tan(Δ부호) / tan(가로 화각/2)      −1 ~ 1 이면 가로로 화면 안 (0 = 가운데)
-    v = tan(해 높이) / tan(세로 화각/2)     0 ~ 1 이면 세로로 화면 안 (0 = 지평선)
+    v = tan(해 높이) / tan(세로 화각/2) / cos(Δ부호)
     in_fov = |u| ≤ 1 · 0 < v ≤ 1 · Δ < 90°,  r = √(u² + v²)  (화면 가운데에서 해까지)
 비교 (한국 284장만 — GLARE 는 촬영 정보 없음, 촬영 단위 GroupKFold(5)):
     화면 12 · 해 위치(높이 · Δ) · 화각 반영 해 위치(u · v · r · in_fov) · 화면 12 + 화각 반영
@@ -12,6 +12,7 @@ Mapillary 가 사진마다 계산해 주는 초점거리(camera_parameters[0], �
 결과: data/glare_mapillary/camera_params.csv (사진별 초점거리 캐시)
 """
 import time
+import json
 
 import numpy as np
 import pandas as pd
@@ -20,6 +21,7 @@ from sklearn.model_selection import GroupKFold
 
 from nunchi_ml.glare.features import FEATURES
 from nunchi_ml.glare.pilot_eval import lightgbm_model
+from nunchi_ml.camera import camera_features, mapillary_calibration
 
 import find_sun_frames as F
 import retrain_korea as R
@@ -27,24 +29,46 @@ import retrain_korea as R
 OUT = F.OUT
 
 
-def camera_params(ids):
-    cache = OUT / "camera_params.csv"
+def camera_params(ids, out=None, *, refresh_calibration=False, metadata_dir=None):
+    """Old caches stay offline. Explicit refresh retains lens/rotation metadata.
+
+    metadata_dir reads saved Graph JSON without HTTP; refresh_calibration=True
+    requests fresh metadata. Neither option is enabled by existing experiments.
+    """
+    cache = (out or OUT) / "camera_params.csv"
     have = pd.read_csv(cache) if cache.exists() else pd.DataFrame(columns=["id", "focal", "width", "height", "camera_type"])
-    tok, rows = F.token(), []
-    for n, i in enumerate([i for i in ids if i not in set(have.id)], 1):
-        r = requests.get(f"https://graph.mapillary.com/{i}", timeout=60, params={
-            "access_token": tok, "fields": "camera_parameters,width,height,camera_type"}).json()
-        cp = r.get("camera_parameters") or [np.nan]
-        rows.append({"id": i, "focal": cp[0], "width": r.get("width"), "height": r.get("height"), "camera_type": r.get("camera_type")})
+    todo = list(dict.fromkeys(ids)) if refresh_calibration or metadata_dir is not None else [i for i in ids if i not in set(have.id)]
+    tok, rows = (F.token() if todo and metadata_dir is None else None), []
+    for n, i in enumerate(todo, 1):
+        if metadata_dir is not None:
+            r = json.loads((metadata_dir / f"{i}.json").read_text(encoding="utf-8"))
+        else:
+            response = requests.get(f"https://graph.mapillary.com/{i}", timeout=60, params={
+                "access_token": tok, "fields": "id,camera_parameters,width,height,camera_type,computed_rotation,exif_orientation"})
+            # Do not include the URL (which contains a token) in HTTP errors.
+            if not response.ok:
+                raise RuntimeError(f"Mapillary metadata request failed: HTTP {response.status_code}, image {i}")
+            r = response.json()
+        row = mapillary_calibration(r)
+        if row["id"] != int(i):
+            raise ValueError(f"Mapillary metadata ID mismatch for {i}")
+        rows.append(row)
         if n % 50 == 0:
             print(f"  화각 {n}장", flush=True)
-        time.sleep(0.05)
+        if metadata_dir is None:
+            time.sleep(0.05)
+    have = have[~have.id.isin(todo)]
     have = pd.concat([have, pd.DataFrame(rows)], ignore_index=True)
     have.to_csv(cache, index=False)
     return have
 
 
-def fov_features(d):
+def fov_features(d, *, projection="legacy"):
+    """Legacy remains reproducible; calibrated modes require explicit metadata."""
+    if projection in {"calibrated", "pose"}:
+        return camera_features(d, use_pose=projection == "pose")
+    if projection != "legacy":
+        raise ValueError("projection must be legacy, calibrated or pose")
     d = d.astype({"focal": float, "width": float, "height": float})
     long = np.maximum(d.width, d.height)
     fpx = d.focal * long
