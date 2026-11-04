@@ -12,6 +12,8 @@
 | `codex_protocol_compare.py` | `g_visibility_probe.py`(PR #16) 프로토콜(고정 스냅샷 · previous 날씨 · 같은 판정 함수 · 촬영 CV 5×30 · 카메라 제외 · 재사용 AI Hub)에 두 단계 구조와 상대 12 행을 더해 비교. Codex 파일은 import 만 하고 수정하지 않는다. |
 | `match_probe.py` | **(기각)** G 가 계산한 해의 화면 위치와 사진의 가장 밝은 점의 거리(`sun_dist · sun_match`)를 특징으로 더한다. |
 | `synth_probe.py` | **(기각)** 정상 사진에 해 원반 · 번짐 · 베일을 합성해 눈부심 · 심함 예시를 늘려 학습한다. |
+| `new_camera_eval.py` · `new_camera_audit.py` | 새 영상 시험. AI 임시/사람 1인/사람 합의를 구분하고 상수 기준선·균형 정확도·영상별 결과·입력/소스 해시를 기록한다. |
+| `prepare_human_review.py` | 기존 사진 ID를 유지한 50장 블라인드 검수 표본을 복사한다. 기존 라벨 묶음/답안은 덮어쓰지 않는다. |
 
 ## 기각한 후보 (같은 Codex 프로토콜)
 | 후보 | 핵심 결과 | 왜 접었나 |
@@ -43,6 +45,31 @@ python notebooks/experiments/sun_visible_probe/codex_protocol_compare.py \
   알림정확도 +.10 [−.01, +.31], 알림재현율 −.11 [−.22, .00] 은 구간이 0 에 걸려 확정하지 못한다.
 - 두 단계의 효과는 **심함 보존**이다 (한 모델 CV 심함 재현율 .13 → 두 단계 .66). 알림 지표는 한 모델과 같다.
 - 12개 중 하나씩 빼면 점수가 가장 떨어지는 것: `disc_sat · blob_circ · ring3`. 4~6개로 줄이면 세 카메라 점수는 오르지만 재사용 AI Hub 알림정확도가 .83 → .74~.75 로 떨어져 줄이지 않았다.
+
+## 새 영상 시험과 사람 검수 — 2026-11-04
+
+기존 `data/new_cameras/label_pack/` 349장은 재생성하지 않는다. `new_camera_frames.py`는 기존 폴더가 있으면 중단한다. 라벨 도구는 묶음의 HTML을 열면 사진이 바로 보이며, 이름 입력 → 판정자 적용 후 기록한다. 답안 저장은 사진 묶음·이름별로 분리한다. CSV는 0/1/2, X는 제외다. 해/번짐 없이 하늘만 하얀 사진은 0, 태양광 때문에 주요 도로 정보가 현저히 식별되지 않을 때 2다. 기존 등급 라벨을 자동 변경하지 않는다.
+
+```powershell
+# 새 표본을 처음 준비할 때만 (기존 폴더가 있으면 중단)
+python notebooks/experiments/sun_visible_probe/prepare_human_review.py --root data/new_cameras --out data/new_cameras/human_review_50
+
+# AI 임시 결과 재현: 사람 검증 성적으로 보고하지 않음
+python notebooks/experiments/sun_visible_probe/new_camera_eval.py --pack data/new_cameras --labels data/new_cameras/labels_claude.csv --label-kind ai_provisional --snapshot data/analysis_20261104/model2_snapshot.csv --rel data/sun_visible/rel_features.csv --cache data/analysis_20261104/step3_visibility/image_features.csv --out data/new_cameras/audit_20261104
+
+# 사람 CSV가 모인 뒤: 동명이인·동일 파일은 독립 판정자로 세지 않음
+python notebooks/experiments/sun_visible_probe/new_camera_eval.py --pack data/new_cameras --labels data/new_cameras/labels_a.csv data/new_cameras/labels_b.csv --label-kind human_consensus --snapshot data/analysis_20261104/model2_snapshot.csv --rel data/sun_visible/rel_features.csv --cache data/analysis_20261104/step3_visibility/image_features.csv --out data/new_cameras/human_evaluation
+```
+
+`human_review_50/`은 AI 라벨 일치도 확인용 표본으로 전체 시험의 사람 2인 검증을 대신하지 않는다. 이 50장과 AI 라벨의 카파를 계산할 때 AI를 사람 합의 정답에 섞지 않는다. 사진·라벨·예측·검수 ZIP은 `data/`에만 두고 공개 GitHub에는 올리지 않는다.
+
+50장 사람 1인 CSV를 평가할 때는 `--label-kind human_single`을 쓰며, `--compare-ai data/new_cameras/labels_claude.csv`를 더하면 AI와의 일치도를 **별도로** 기록한다. AI 제외 행은 사람 평가에서 삭제하지 않고 일치도 비교에서만 비교불가로 남긴다. `human_ai_comparison.csv`와 `report.json`의 `human_ai_agreement`에서 일치율·비가중/선형/이차 카파·혼동행렬·비교 불가 수를 확인한다. CSV의 `labeler`는 판정자 자기기입 정보이며, 파일 검증만으로 실제 독립 판정을 입증하지는 않는다.
+
+사람 1인 50장(14영상)의 첫 확인: 정상32·눈부심8·심함10. AI가 X로 제외한 2장 외 48장 일치율 .708, 코헨 카파 .473(선형 .594, 이차 .722), 사람 심함10장 중 AI는7장을 눈부심으로 낮게 판정했다. 같은 학습624장 모델을 사람50장에 평가하면 LightGBM 정확도 .540·균형정확도 .531·F1 .318·심함재현율 .200, 상대12 로지스틱 .540·.568·.213·.000, 최선단일특징 규칙 정확도 .580, 전부정상 .640이다. ML−최선규칙 정확도 차이는 둘 다 −.04이고 영상 군집95%구간은0을 포함한다. 사람1인·50장 탐색이며 일반화/ML 우위를 확정하지 않는다. 사람 파일은 보존하고 AI 라벨을 자동 덮어쓰지 않는다.
+
+기존 AI 라벨 시험 325장/13영상 결과를 재현했다. LightGBM 알림정확도 .603·균형정확도 .572·재현율 .513, 상대12 로지스틱 .498·.508·.526이다. **전부 정상 기준선은 정확도 .766·균형정확도 .500·재현율 0**이다. 따라서 밝기 규칙 대비 정확도 차이만으로 실사용 성능이나 일반화 성공을 선언하지 않는다. ML1과 최선 단일 특징 규칙의 차이는 확정되지 않았고, 이 시험에서 상대12가 기존 화면12보다 낫다는 근거도 없다. AI 라벨, 장면 편중, 영상별 카메라 독립성 미확인 한계를 유지한다.
+
+결과 폴더의 `report.json`에 라벨 근거·합의 기준·입력/소스 해시·환경·규칙 문턱·통계 구간, `scores.csv`·`per_video.csv`·`predictions.csv`·`paired_accuracy.csv`·`label_review.csv`에 전체 결과를 기록한다. 두 사람 중 한 명만 답했거나 제외한 행, 불일치 행은 합의 성적에 넣지 않는다. 평가 후 모델/문턱을 바꾸면 같은 시험을 새 독립 검증이라고 부르지 않는다.
 
 ## 한계 (알고 쓴다)
 - 사람이 판정한 해 가시성 · 가림 정답이 없는 **대리 특징**이다. 새 카메라에서 해가 보일 때의 재현율은 증명되지 않았다 (96장 블라인드 검수 판정 전).
