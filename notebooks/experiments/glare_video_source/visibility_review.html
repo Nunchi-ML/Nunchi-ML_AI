@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ko">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>해 가림·도로 식별성 검수</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f6f3ed;color:#292922;font:15px system-ui,sans-serif}
+header,main{max-width:1380px;margin:auto;padding:16px}header{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+h1{font-size:20px;margin:0}button,input,select,textarea{font:inherit;padding:8px;border:1px solid #aaa;border-radius:6px}
+button{cursor:pointer;background:white}input{max-width:180px}button:focus-visible,input:focus,select:focus,textarea:focus{outline:3px solid #368398}
+main{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:18px}.stage{background:#171a1b;padding:8px;align-self:start}
+#photo{display:block;width:100%;height:auto;cursor:crosshair}aside{padding:16px;background:white;border-radius:10px}
+label{display:grid;gap:4px;margin:10px 0}textarea{width:100%;height:64px}p{line-height:1.6}small{color:#555}
+.nav{display:flex;justify-content:space-between;gap:8px;margin-top:12px}.coords{display:flex;gap:8px}.coords input{width:110px}
+#status{min-height:24px;color:#21546a}#error{color:#a33121}.notice{background:#ece8de;padding:10px;border-radius:6px}
+@media(max-width:900px){main{grid-template-columns:1fr}aside{padding:12px}header{padding-bottom:0}.stage{padding:4px}}
+</style>
+<header><h1>해 가림·도로 식별성 검수</h1><label>판정자 <input id="rater" placeholder="이름 또는 이니셜" autocomplete="off"></label>
+<button id="download">CSV 저장</button><span id="progress"></span></header>
+<main><section><div class="stage"><img id="photo" alt="검수할 전방 사진"></div>
+<div class="nav"><button id="prev">이전</button><strong id="position"></strong><button id="next">다음</button></div>
+<p class="notice">사진에서 직접 확인한 것만 표시하세요. 원반이 안 보인다는 이유만으로 건물 가림을 추정하지 않습니다.
+차선·앞차·신호가 없거나 너무 멀면 ‘대상 없음·멀거나 판단 불가’를 고르세요.</p>
+<p><small>기존 눈부심 등급을 다시 정하는 작업이 아닙니다. 다른 판정자와 상의하기 전에 독립적으로 기록해 주세요.
+입력은 이 브라우저에 임시 저장됩니다. 작업을 마치면 CSV를 저장하세요.</small></p>
+</section><aside><div id="fields"></div>
+<label>해 중심 좌표 (선택)<small>원반이 보일 때 사진을 클릭하면 기록됩니다. 번짐이나 밝은 벽은 클릭하지 마세요.</small></label>
+<div class="coords"><input id="sun_x" type="number" min="0" max="1" step="0.0001" aria-label="해 중심 가로 좌표"><input id="sun_y" type="number" min="0" max="1" step="0.0001" aria-label="해 중심 세로 좌표"></div>
+<button id="clearPoint">좌표 지우기</button><label>메모 <textarea id="notes"></textarea></label>
+<div id="status" role="status"></div><div id="error" role="alert"></div></aside></main>
+<script>
+const payload=__DATA__;
+const manifest="__BUNDLE__";
+const el=id=>document.getElementById(id), fields=payload.fields, columns=payload.columns;
+let index=0, answers={}, activeRater="";
+for(const [key,title,options] of fields){
+ const label=document.createElement("label"),select=document.createElement("select");label.textContent=title;select.id=key;
+ select.add(new Option("선택 전",""));
+ for(const [value,text] of options)select.add(new Option(text,value));
+ label.append(select);el("fields").append(label);select.addEventListener("change",save);
+}
+function storageKey(){return "visibility-review:"+manifest+":"+activeRater}
+function blank(){return Object.fromEntries(columns.map(k=>[k,""]))}
+function activate(){
+ const name=el("rater").value.trim();if(name===activeRater)return;
+ activeRater=name;answers={};index=0;
+ try{answers=JSON.parse(localStorage.getItem(storageKey())||"{}")}catch(e){el("error").textContent="임시 저장을 불러올 수 없습니다. CSV를 따로 보관하세요."}
+ show();
+}
+function show(){
+ const row=payload.records[index],a=answers[row.review_id]||blank();el("photo").src=row.image;
+ el("position").textContent=(index+1)+" / "+payload.records.length+" · "+row.review_id;
+ for(const key of columns)el(key).value=a[key]??"";
+ el("prev").disabled=index===0;el("next").disabled=index===payload.records.length-1;
+ progress();el("status").textContent="";
+}
+function progress(){const done=Object.values(answers).filter(a=>fields.every(([key])=>a[key])).length;
+ el("progress").textContent="필수 항목 완료 "+done+" / "+payload.records.length;}
+function save(){
+ if(!activeRater){el("error").textContent="판정자 이름을 먼저 입력하세요.";return false}
+ const a=Object.fromEntries(columns.map(key=>[key,el(key).value]));
+ for(const key of ["sun_x","sun_y"]){if(a[key]!==""&&(!Number.isFinite(Number(a[key]))||Number(a[key])<0||Number(a[key])>1)){
+  el("error").textContent="좌표는 0~1 사이로 입력하세요.";return false;}}
+ if(a.sun_disc!=="visible"&&a.sun_disc!=="partly_occluded"){a.sun_x=a.sun_y="";el("sun_x").value=el("sun_y").value="";}
+ answers[payload.records[index].review_id]=a;
+ try{localStorage.setItem(storageKey(),JSON.stringify(answers));el("status").textContent="임시 저장됨";el("error").textContent=""}
+ catch(e){el("error").textContent="임시 저장에 실패했습니다. CSV를 바로 저장하세요."}
+ progress();return true;
+}
+el("rater").addEventListener("input",activate);
+el("rater").addEventListener("change",activate);
+for(const key of ["sun_x","sun_y","notes"])el(key).addEventListener("change",save);
+el("prev").onclick=()=>{if(save()){index--;show()}};
+el("next").onclick=()=>{if(save()){index++;show()}};
+el("clearPoint").onclick=()=>{el("sun_x").value=el("sun_y").value="";save()};
+el("photo").onclick=e=>{
+ if(!["visible","partly_occluded"].includes(el("sun_disc").value)){el("error").textContent="원반이 보이거나 일부 가린 사진에서만 중심을 기록하세요.";return}
+ const r=e.currentTarget.getBoundingClientRect();el("sun_x").value=((e.clientX-r.left)/r.width).toFixed(4);
+ el("sun_y").value=((e.clientY-r.top)/r.height).toFixed(4);save();
+};
+function csvCell(v){return '"'+String(v??"").replaceAll('"','""')+'"'}
+el("download").onclick=()=>{
+ if(!save())return;
+ const header=["manifest","rater","review_id",...columns];
+ const lines=[header,...payload.records.map(r=>{const a=answers[r.review_id]||blank();return [manifest,activeRater,r.review_id,...columns.map(k=>a[k])]})];
+ const blob=new Blob(["\ufeff"+lines.map(row=>row.map(csvCell).join(",")).join("\r\n")],{type:"text/csv;charset=utf-8"});
+ const url=URL.createObjectURL(blob),link=document.createElement("a");link.href=url;link.download="visibility_"+activeRater.replace(/[^\w가-힣-]/g,"_")+".csv";link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+};
+show();
+</script>
+</html>
