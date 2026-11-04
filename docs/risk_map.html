@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SunSight - 전국 고속도로 태양 역광 사고 위험도 지도 (Model 1)</title>
+    <title>SunSight - 전국 고속도로 태양광 정면 노출 및 시각정보 저하 안내 지도 (Model ①)</title>
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
@@ -200,24 +200,24 @@
 <body>
 
 <div id="sidebar">
-    <h1>☀️ SunSight Expressway Risk</h1>
+    <h1>☀️ SunSight Solar Exposure</h1>
     <div class="meta-tag">
-        <span class="meta-pill">Model ① (v1.0.0)</span>
+        <span class="meta-pill">Model ① 사전 공간정보</span>
         <span class="meta-pill">전국 5,782개 구간</span>
     </div>
     
     <div class="stats-grid">
         <div class="stat-card" onclick="filterByGrade('DANGER')">
             <div class="stat-val danger-color" id="cnt-danger">404</div>
-            <div class="stat-lbl">고위험 (≥0.035)</div>
+            <div class="stat-lbl">집중 노출 (상위 10%)</div>
         </div>
         <div class="stat-card" onclick="filterByGrade('WARNING')">
             <div class="stat-val warning-color" id="cnt-warning">1,282</div>
-            <div class="stat-lbl">주의 (≥0.025)</div>
+            <div class="stat-lbl">주의 노출 (상위 25%)</div>
         </div>
         <div class="stat-card" onclick="filterByGrade('SAFE')">
             <div class="stat-val safe-color" id="cnt-safe">4,096</div>
-            <div class="stat-lbl">안전 (<0.025)</div>
+            <div class="stat-lbl">일반 구간</div>
         </div>
     </div>
 
