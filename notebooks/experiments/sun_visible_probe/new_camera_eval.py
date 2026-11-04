@@ -18,6 +18,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
+sys.path.insert(0, str(HERE.parent / "glare_video_source"))
 
 import numpy as np
 import pandas as pd
@@ -122,17 +123,18 @@ def main():
         print(f"  {n:42s} {acc(y, pp):.3f} · {f1(y, pp):.3f} · {fa:.3f} · {rc:.3f}")
 
     rng = np.random.default_rng(0); cl = te.video.to_numpy(); u = np.unique(cl); idx = {c: np.where(cl == c)[0] for c in u}
-    ml = "ML2 로지스틱(상대 12)"
     B = {n: [] for n in preds}
     for _ in range(3000):
         ii = np.concatenate([idx[c] for c in rng.choice(u, len(u))])
         for n, pp in preds.items():
             B[n].append(acc(y[ii], pp[ii]))
-    print(f"\n영상 {len(u)}개 군집 부트스트랩 — 알림정확도 95% 구간, 그리고 ML2 − 방법 차이")
+    print(f"\n영상 {len(u)}개 군집 부트스트랩 — 알림정확도 95% 구간, 그리고 ML − 방법 차이")
     for n in preds:
-        b = np.array(B[n]); d = np.array(B[ml]) - b
-        extra = "" if n == ml else f" | ML2 − 이 방법 {d.mean():+.3f} [{np.percentile(d, 2.5):+.3f}, {np.percentile(d, 97.5):+.3f}]"
-        print(f"  {n:42s} [{np.percentile(b, 2.5):.3f}, {np.percentile(b, 97.5):.3f}]{extra}")
+        b = np.array(B[n]); line = f"  {n:42s} [{np.percentile(b, 2.5):.3f}, {np.percentile(b, 97.5):.3f}]"
+        for ml in [k for k in preds if k.startswith("ML")]:
+            if n != ml:
+                d = np.array(B[ml]) - b; line += f" | {ml[:3]}−이 방법 {d.mean():+.3f} [{np.percentile(d, 2.5):+.3f}, {np.percentile(d, 97.5):+.3f}]"
+        print(line)
 
 
 if __name__ == "__main__":
