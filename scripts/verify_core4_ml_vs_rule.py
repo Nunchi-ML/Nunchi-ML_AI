@@ -40,7 +40,8 @@ for fold, (tr, te) in enumerate(gkf.split(df, y_count, groups)):
     pred_tr_mean = np.mean(m.predict(df.iloc[tr][CORE_4_FEATURES]))
     
     oof_ml_raw[te] = pred_te
-    oof_ml_prior_adj[te] = pred_te / pred_tr_mean * np.mean(y_count)
+    # 학습 Fold의 평균 예측치(pred_tr_mean)만으로 나누어 Fold별 스케일 차이를 보정 (검증 Fold 정답 미사용)
+    oof_ml_prior_adj[te] = pred_te / pred_tr_mean
     oof_ml_rank[te] = pd.Series(pred_te).rank(pct=True).values
     oof_rule_rank[te] = pd.Series(rule_vals[te]).rank(pct=True).values
     
