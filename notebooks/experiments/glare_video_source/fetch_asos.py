@@ -10,13 +10,15 @@
 
     python notebooks/experiments/glare_video_source/fetch_asos.py
 결과: data/asos/daegu_143.csv (날짜별로 받아 쌓음 — 이미 받은 날은 다시 안 물음). 서울은 attach(d, stn=108) → seoul_108.csv
-      사진에 붙이기는 attach() — 촬영 시각의 가장 가까운 정시 값
+      사진에 붙이기는 attach() — 촬영 시각 이전/동일 정시 값 (공개 시각 검증과 별개)
 """
 import time
 from pathlib import Path
 
 import pandas as pd
 import requests
+
+from nunchi_ml.weather import align_hourly_weather, observation_hours
 
 import find_sun_frames as F
 
@@ -68,17 +70,25 @@ def ensure(days, stn=143):
     return have
 
 
-def attach(d, time_col="captured_at_kst", stn=143):
-    """d[time_col](한국시간 문자열) 에 가장 가까운 정시의 cloud · sunshine · radiation 을 붙임. 빈 값은 NaN."""
-    t = pd.to_datetime(d[time_col])
-    a = ensure(t.dt.strftime("%Y%m%d").unique(), stn)
+def attach(d, time_col="captured_at_kst", stn=143, *, alignment="previous",
+           available_at_col=None, require_available=False):
+    """직전 정시를 붙이고 관측/공개 시각을 기록. nearest는 과거 실험 재현 전용.
+
+    과거 캐시는 공개 시각이 없어 weather_availability_verified=False다.
+    실시간 사용을 검증하려면 available_at_col과 require_available=True 필요.
+    """
+    hours = observation_hours(d[time_col], alignment)
+    a = ensure(hours.dt.strftime("%Y%m%d").unique(), stn)
     a = a.assign(tm=pd.to_datetime(a.tm)).set_index("tm")
     for c in COLS.values():
         a[c] = pd.to_numeric(a[c], errors="coerce")
     a.loc[a.index.hour.isin(range(7, 19)), "sunshine"] = a.sunshine.fillna(0)   # 낮에 일조 빈칸 = 해 안 남
     a["rain"] = a.rain.fillna(0)                                                  # 강수 빈칸 = 비 안 옴
-    hour = t.dt.round("h")
-    return d.assign(**{c: hour.map(a[c]).to_numpy() for c in COLS.values()})
+    matched = align_hourly_weather(
+        d[time_col], a.reset_index(), alignment=alignment,
+        available_at_col=available_at_col, require_available=require_available,
+    )
+    return d.assign(**{c: matched[c].to_numpy() for c in matched.columns})
 
 
 def main():

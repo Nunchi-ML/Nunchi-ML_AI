@@ -276,6 +276,32 @@ GLARE 는 촬영 정보가 없어 해 위치 칸을 빈칸으로 두고 GLARE + 
 
 **데이터 없이 받은 사람이 돌리기**: `data/g_data_bundle_2026-11-03.zip` (CSV 16개, 0.35 MB — 라벨 · 해 위치 · 화각 · 화면 숫자 · ASOS 캐시, 사진 없음)을 `data/` 에 풀면 API 키 없이 `g_model_probe.py` · `g_fusion_probe.py` · `g_calibration_probe.py` 가 그대로 돌아감 (캐시에 없는 것만 키를 찾음). AI Hub 부분은 팀 내부 사용만.
 
+### 날씨 시각 기준 정리 (2026-11-04, 1단계)
+
+`fetch_asos.attach()`의 기본값은 촬영 시각 **이전/동일 정시**(`previous`)다. 15:45 사진에는 15:00 관측을 붙인다. 그 시간이 없으면 결측을 유지하며 미래 값이나 오래된 다른 시간으로 대체하지 않는다. 기존 낮 일조/강수 빈칸 처리 방식은 이번 단계에서 바꾸지 않았다.
+
+- 결과에 `weather_requested_hour`, `weather_observed_at`, `weather_age_minutes`, `weather_time_policy`, `weather_available_at`, `weather_availability_verified`를 남긴다. 추가된 메타데이터는 모델 특징으로 넣지 않는다.
+- **관측 시각과 공개 시각은 다르다.** 현재 공공데이터포털 [ASOS 시간자료 API](https://www.data.go.kr/data/15057210/openapi.do)는 종료일을 전일(D-1)까지 제공한다고 안내한다. 과거 캐시에는 당시의 공개/수신 시각이 없으므로 `weather_availability_verified=False`다. `previous`만으로 실시간 사용이 검증됐다고 표시하지 않는다.
+- 실시간/당시 이용 가능성을 검증할 때는 공유 함수 `nunchi_ml.weather.align_hourly_weather()`에 실제 공개/수신 시각 열을 `available_at_col`로 지정하고 `require_available=True`를 사용한다. 공개 시각이 촬영 후이거나 불명인 행은 날씨값을 결측으로 두고, 공개 시각 열 자체가 없으면 오류를 낸다. 임의로 공개 지연을 가정하지 않는다.
+- 기존 연구 재현은 `attach(..., alignment="nearest")` 또는 `g_model_probe.data(weather_alignment="nearest")`. G 메인 실행은 `G_WEATHER_ALIGNMENT=nearest`로 선택할 수 있다. 기본값이 바뀌었으므로 위의 11/2~11/3 점수표는 **과거 nearest 실험 기록**으로 유지한다.
+
+고정한 사진·기하·분할·로지스틱·판정 기준(0.5/0.5)에서 날씨 결합만 비교한 로컬 탐색 결과:
+
+| 결합 | 촬영 CV 5 × 30 macro F1 | 심함 정밀도 / 재현율 | AI Hub 재사용 시험 F1 / 정상 헛알림 | 미래 관측 행 |
+|---|---|---|---|---|
+| nearest (과거 재현) | 0.525 | 0.333 / 0.411 | 0.157 / 83.0% | 70/624 |
+| previous (새 기본값) | 0.543 | 0.390 / 0.693 | 0.182 / 83.0% | 0/624 |
+
+관측의 미래 참조는 제거했지만 외부 일반화는 해결되지 않았다. previous의 AI Hub 심함 재현율 1.0은 288장을 심함으로 몰아준 결과(정밀도 0.146)다. 공개 시각을 확인한 행은 두 정책 모두 0/624. AI Hub는 반복해서 사용한 개발/스트레스 세트이며 새로운 독립 외부 시험이 아니다. 기존 G 6개·0.5/0.5 PM 결정을 자동 변경하거나 새 모델을 배포하지 않는다.
+
+공유 재현 스크립트(외부 요청 없음):
+
+```bash
+python notebooks/experiments/glare_video_source/g_weather_time_probe.py --snapshot data/analysis_20261104/model2_snapshot.csv --out data/analysis_20261104/step1_weather_time
+```
+
+사진·라벨·기하를 고정한 스냅샷은 로컬/git 제외 파일이다. 다른 데이터로 재현할 때는 같은 입력 열의 CSV와 ASOS 캐시를 준비한다. 출력은 점수, 사진별 예측, 결합 시각, 입력/캐시 해시·실행 환경이며 raw CSV와 결과를 Git에 올리지 않는다. 다음 단계는 카메라 투영·왜곡·기울기 점검이다.
+
 ## 라벨
 
 1. `label_tool.html` 을 크롬으로 열기 (더블클릭) → `data/glare_mapillary` 폴더 고르기 → 이름 적기
