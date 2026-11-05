@@ -1077,3 +1077,20 @@ python notebooks/experiments/sun_visible_probe/sd_photo_validation.py --out <new
 ```
 
 공개대상은 새실행기/테스트/이집계README3파일이며 사진/개별판정·전체산출물/COLLAB은 로컬이다. PR46사용자병합과 최신main61a2190 fetch확인 후 main기반 feat/sd-photo-validation에서 진행했다.
+
+### 사용자 확인 후 가중치 후보 추가 대조
+
+첫7모델에는 이전 촬영가중치 후보가 빠져 있었다. 사용자 질문 후 `sd_photo_weight_followup.py`로 기존실험/예측을 보존한 별도후속을 실행했다. 이전 학습624 OOF로 선택된 detail_regularized_capture_sqrt(사람50 F1 .481699)와 사람50의 단일관측최고 detail_regularized_capture_inverse(.483472)를 모두 추가했다. 후자는 학습내선택 후보와 구분하며 이번SD결과로 고르지 않았다. 첫SD결과를 이미 본 뒤 추가한 사후후속임을 명시한다.
+
+| 고정 사진 후보 | 첫295 F1 | 보강68 F1 | 심함 첫/보강 |
+|---|---:|---:|---|
+| 기존학습선택 촬영sqrt가중치 | .49393 | .43835 | 0/1 · 0/3 |
+| 이전사람50 관측최고 촬영inverse가중치 | .50917 | .35533 | 0/1 · 0/3 |
+
+같은원624/27촬영·전방18/기존정규화설정·기존가중치식만 사용했고 SD재학습/튜닝없다. 기존사람50의 두모델100판정을 정확재현했다. 별도 private `data/sd_photo_weight_followup_20261106/`에 실행전소스/입력·규칙/기존선택출처·SD738원판정/공동확률·4지표행/날짜군집대조·원입력불변을 보존했다. 이전사람50 최고가 SD에서도 최고라는 결론은 아니며, 기존화면LGB의두SD관측F1우위/오경보-누락교환 판단은 그대로다.
+
+```powershell
+python notebooks/experiments/sun_visible_probe/sd_photo_weight_followup.py --out <new-private-output-inside-data>
+```
+
+사용자가 시계는KST실제시각과맞고 주촬영구간은대구신천대로/iM뱅크-칠곡이라고 확인해 대구ASOS143의8날짜178시간 자료를 새private폴더에 확보했다. 모든17,204사진을직전정시관측과연결했고 운량/일조완비16,824·미완비380은공란유지했다. 이는 대표지역의과거관측이며 사진별GPS/방향·관측공개시각/차량조도 실측을 뜻하지 않는다. 원영상은팀원보유/현재PC미접근이므로 원본GPS기록유무는미확인이다. 공유된과거ASOS캐시·인증/원표는불변이고 이날씨자료로G모델을아직평가하지않았다. 최종공개는위가중치후속실행기를추가한4파일이며 기상원응답/수집기·개별대응표도로컬이다.
