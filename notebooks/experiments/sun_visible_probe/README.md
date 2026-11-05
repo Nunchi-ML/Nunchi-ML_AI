@@ -1013,3 +1013,29 @@ python notebooks/experiments/sun_visible_probe/sd_content_review.py finalize --o
 ```
 
 선행PR45 미병합 동안 후속코드는 로컬보존하며 겹치는 새PR/푸시·직접병합을 하지 않는다. 공개예정은 실행기·테스트·집계README뿐이고 사진/개별관찰·라벨/전체산출물·COLLAB은 로컬이다.
+
+## SD 내용 보강69장 GPT 참고판정 — 2026-11-05 실행·11-06 검증
+
+`sd_supplement_labels.py`는 내용검토261후보에서 준비한69클립69장을 별도 익명 입력으로 만든다. 기존300장의 사진ID/바이트 중복0, 보류날짜 제외·원등급 공란·개발목록/원JPEG SHA256·클립 고유성을 검증한다. 기존 동결 `sd_three_ai_labels.py`의 동일 기준/스키마·제공자 어댑터를 재사용하고 선별메모/다른 답/원파일명은 숨긴다. seed110569·10장씩6배치+9장1배치이며 성공배치는 반복하지 않는다. 사람원표·기존300응답·운영모델은 유지한다.
+
+| 실제 모델 | 새 유효응답 | 0 / 1 / 2 / abstain | 새 미완료 |
+|---|---:|---|---:|
+| gpt-6.1-sol (CodexCLI0.166.0) | 69 | 22 / 43 / 3 / 1 | 0 |
+| claude-sonnet-5-5 | 0 | — | 69 |
+| gemini-3.8-flash-high | 0 | — | 69 |
+
+Claude/Gemini는 기존 실제 한도거절 근거와 초기화 시각을 상속해 **새 요청을 하지 않았다**. CSV는 `not_requested_known_quota`이며 등급 공란, 새 실패배치/가짜 응답을 만들지 않는다. Claude 응답의 초기화는2026-11-06 19:00 KST, Gemini는 기존 응답 당시144시간36분이다. 원한도 근거의 SHA256을 검사하며 이번 private출력에는 이후 기존300 재개에 대비한 근거 복사본/원경로/변경 전 메타데이터도 보존했다. 성공 GPT7배치/69응답, 새138+기존340=총478판정이 남는다. 인증/계정·유료대체 설정 변경은 없다.
+
+GPT심함3/보류1의 원본을 다시 열어 보조감사했다. 심함3장은 가까운차량/경계가 남는 태양포화 등급경계 사례이고, 보류1은 전방 주행방향 불명인 비도로 장면이다. 원GPT등급을 유지하며 교차검토 대상으로 남긴다. 같은 GPT계열의 사후검토는 독립판정자가 아니다. 심함3장은3클립/파일명날짜2묶음으로, 같은날짜2장은 파일명+프레임 추정시각33초·화면시계32초 간격이다. 두 시계 모두 미검증이며 독립주행3건/확정심함3건으로 세지 않는다.
+
+69장 중62클립은 기존300과 공유하는 다른 프레임이며 신규클립은7개다. 목적표집의 새양성46/69를 기존38/300과 비교해 실제유병률/표본대표성/모델개선으로 주장하지 않는다. GPT전체369장의 재고 집계는0/1/2/기권279/80/4/6이지만 평가셋으로 합치지 않았다. 3자합의69장 모두 미완료, 학습/새F1평가0·최종선정보류다.
+
+private `data/sd_supplement_labels_20261105/`에 입력/기준·소스/해시·첨부/원응답/실행버전·제공자CSV/미요청상태·비교/합의보류·분석/검증을 보존했다. `gpt_review_69.html`은69원본과GPT의견, `priority_review_4.html`은심함/보류4장이다. 이미지73참조 누락0,69행 고유ID/미요청 공란·합의공란, 새69/기존300 입력·첨부바이트/소스 불변을 확인했다. 신규5개 포함 전체329테스트 통과(기존CORAL경고4). 사진·개별판정·전체출력은 로컬이며 공개대상은 실행기/테스트/집계README3파일뿐이다. PR45 OPEN/main cd9709d fetch 재확인으로 로컬보존·겹치는후속PR/푸시 없음.
+
+```powershell
+python notebooks/experiments/sun_visible_probe/sd_supplement_labels.py prepare --source data/sd_content_review_20261105 --development data/sd_curation_20261105/development_candidates.csv --previous data/sd_curation_20261105/development_review_300.csv --quota-source data/sd_ai_labels_20261105 --out <new-private-output> --inputs <new-blinded-input-directory>
+python notebooks/experiments/sun_visible_probe/sd_supplement_labels.py run --out <private-output> --providers gpt --batches 7 --workers 2
+# After each provider's quota recovery only; existing successful batches are retained.
+python notebooks/experiments/sun_visible_probe/sd_supplement_labels.py run --out <private-output> --providers claude --batches 7 --workers 2
+python notebooks/experiments/sun_visible_probe/sd_supplement_labels.py export --out <private-output>
+```
