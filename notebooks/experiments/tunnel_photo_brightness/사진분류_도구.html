@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><title>터널 사진 분류</title>
+<style>
+body{font-family:"Malgun Gothic",sans-serif;margin:16px;background:#fafafa;color:#222}
+#img{max-width:100%;max-height:70vh;display:block;margin:8px 0;border:1px solid #ccc}
+.keys span{display:inline-block;margin-right:12px;padding:4px 8px;background:#eee;border-radius:4px}
+#stat{font-weight:bold}
+button{padding:6px 12px;margin-right:8px}
+</style></head><body>
+<h2>터널 사진 4분류</h2>
+<p>1) 이름 입력 → 2) <b>사진</b> 폴더 선택 → 3) 키보드로 분류 → 4) 끝나면 "CSV 저장" (파일 이름: 사진분류_이름.csv)<br>
+<small>중간에 창을 닫아도 같은 브라우저면 이어서 할 수 있어요. 그래도 끝나면 꼭 CSV 저장을 눌러 주세요.</small></p>
+<p>이름: <input id="who" placeholder="예: 재혁" size="8"></p>
+<input type="file" id="dir" webkitdirectory multiple>
+<div class="keys">
+<span>1 = 입구 (밖에서 입구가 보임)</span><span>2 = 출구 (터널 안에서 출구가 보임)</span>
+<span>3 = 터널 안</span><span>4 = 터널 없음</span><span>5 = 애매함</span><span>← = 이전 사진</span>
+</div>
+<p id="stat">폴더를 골라 주세요</p>
+<img id="img">
+<button onclick="save()">CSV 저장</button>
+<script>
+const NAMES={'1':'입구','2':'출구','3':'터널 안','4':'터널 없음','5':'애매'};
+function key(){return 'cls_'+(document.getElementById('who').value||'noname');}
+function keep(){try{localStorage.setItem(key(),JSON.stringify(lab))}catch(e){}}
+function load(){try{lab=JSON.parse(localStorage.getItem(key())||'{}')}catch(e){lab={}}}
+let files=[],i=0,lab={};
+document.getElementById('dir').onchange=e=>{
+  files=[...e.target.files].filter(f=>/\.jpe?g$/i.test(f.name)).sort((a,b)=>a.name.localeCompare(b.name));
+  load();i=0;while(i<files.length&&lab[files[i].name.replace(/\.jpe?g$/i,'')])i++;show();};
+function show(){
+  if(!files.length)return;
+  if(i>=files.length){document.getElementById('stat').textContent=`끝! ${Object.keys(lab).length}장 분류 → CSV 저장을 누르세요`;return;}
+  const f=files[i];document.getElementById('img').src=URL.createObjectURL(f);
+  const id=f.name.replace(/\.jpe?g$/i,'');
+  document.getElementById('stat').textContent=`${i+1} / ${files.length}  (${id})  지금 분류: ${lab[id]||'-'}`;}
+document.onkeydown=e=>{
+  if(!files.length)return;
+  if(NAMES[e.key]&&i<files.length){lab[files[i].name.replace(/\.jpe?g$/i,'')]=NAMES[e.key];keep();i++;show();}
+  else if(e.key==='ArrowLeft'&&i>0){i--;show();}};
+function save(){
+  const rows=['image_id,class',...Object.entries(lab).map(([k,v])=>`${k},${v}`)];
+  const b=new Blob(['﻿'+rows.join('\n')],{type:'text/csv'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='사진분류_'+(document.getElementById('who').value||'noname')+'.csv';a.click();}
+</script></body></html>
