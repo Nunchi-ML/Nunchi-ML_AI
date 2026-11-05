@@ -954,3 +954,33 @@ python notebooks/experiments/sun_visible_probe/sd_frame_curation.py --root ../..
 로컬 `data/sd_curation_20261105/start_here.html`에서 권장 `development_review_300/review.html`·확장후보·주차대표를 연다. 원표 판정자/최종라벨 열은 비워 두며 사용자1인 기준 진행·추가판정자 대기없음을 유지한다. 전체결정/이유/지문·품질대리값/목록·유사쌍/229전환대응·원본해시/환경을 로컬 보존한다. 17,204원프레임/기존349/입력표·실행소스 전후해시 불변/원본삭제0, 신규6개 포함전체313테스트 통과(기존CORAL경고4). 갤러리5개JS구문/3,273이미지참조 검수도 통과했다.
 
 이 단계는 데이터 준비이며 모델학습/새F1·정답검증 완료가 아니다. 메타데이터·개발라벨/최종분할을 확인하고 사진모델/동등자료 강한규칙을 비교한다. G입력이 갖춰진 경우에만 G/사진/결합을 평가한다. 전체남은작업과 새자료 정답/평가 후 최종선정한다. 공개는 실행기·테스트·집계만이며 원사진/원표/개별경로/전체출력·검토묶음/COLLAB은 로컬이다.
+
+## SD 개발300장 세 제공자 독립 참고라벨 — 2026-11-05
+
+사용자 요청으로 `sd_three_ai_labels.py`가 같은 개발300장의 원본 JPEG를 익명ID로 직접 첨부해 Claude·Gemini·GPT에 각각 판정시켰다. 동일 기준/스키마·10장×30배치·새 대화·다른 답/기존 예측 비공개이며 도구/웹/다른파일 접근은 금지한다. 배치별 첨부/프롬프트 해시·모델/사용량·원응답·실패를 private출력에 보존한다. 보류날짜는 제공하지 않으며 사람라벨/운영모델을 변경하지 않는다.
+
+| 실제 모델 | 유효응답 | 0 / 1 / 2 / abstain | 미완료 |
+|---|---:|---|---:|
+| claude-sonnet-5-5 | 150 | 125 / 23 / 0 / 2 | 150 |
+| gemini-3.8-flash-high | 110 | 103 / 7 / 0 / 0 | 190 |
+| gpt-6.1-sol | 300 | 257 / 37 / 1 / 5 | 0 |
+
+Claude Code2.1.318·AGY ACP1.5.0·CodexCLI0.166.0의 실제 응답이다. 첫10장씩 정상응답 후 제공자별 최대동시2개로 진행했다. Claude 주간한도 거절(초기화 응답2026-11-06 19:00 KST)과 Gemini individual quota 거절(응답 당시144시간36분)이 발생해 해당 제공자만 중단했다. Gemini의 비JSON 안내는 원응답에서 한도오류로 확인했고 재시도/정상라벨로 취급하지 않았다. 인증/토큰/유료대체 설정은 변경하지 않았다. 총900예정 판정 중560유효/340미완료이므로 세모델 전체완료가 아니다.
+
+공통110장은3자등급일치101/등급불일치7/기권포함2이며 나머지190장은3자비교 미완료다. 기권제외 쌍별 일치율은 Claude–Gemini108쌍 .9352(κ .6351), Claude–GPT148쌍 .9459(κ .7600), Gemini–GPT109쌍 .9541(κ .7136)이다. 표본/정상편중이 다르므로 제공자 순위나 정확도가 아니다. 심함은 GPT만1건으로 심함신뢰도/새F1을 검증하지 못한다. 카메라흐림·노출·인공등은 태양눈부심과 구분해 대안원인/불확실성으로 기록한다.
+
+로컬 `data/sd_ai_labels_20261105/`에 제공자별300행CSV(미완료 상태 포함), 비교/합의제안CSV·불일치갤러리·의미일관성 검토표·실행전기준/소스/버전·원응답/실패가 있다. 3자일치 등급과 다수결 제안을 분리하고 미완료/기권을 강제등급으로 채우지 않는다. 모두 **AI 참고의견이며 사람정답·일반사람 응답확률이 아니다**. 원17,204사진/기존349/입력7파일 전후해시 변경0, 원표·선택300장불변. 사진/개별라벨·전체산출물은 공개하지 않는다.
+
+```powershell
+python notebooks/experiments/sun_visible_probe/sd_three_ai_labels.py prepare --source data/sd_curation_20261105/development_review_300 --out <new-private-output> --inputs <new-blinded-input-directory>
+python notebooks/experiments/sun_visible_probe/sd_three_ai_labels.py run --out <private-output> --batches 1
+python notebooks/experiments/sun_visible_probe/sd_three_ai_labels.py run --out <private-output> --batches 30 --workers-per-provider 2
+python notebooks/experiments/sun_visible_probe/sd_three_ai_labels.py export --out <private-output>
+# Only after quota recovery: successful batches are never repeated;
+# the explicit retry archives prior failed attempts and keeps the same images/rubric.
+python notebooks/experiments/sun_visible_probe/sd_three_ai_labels.py run --out <private-output> --providers claude --batches 30 --retry-failed
+```
+
+단독 신규출력/원자료·출력·블라인드입력 분리, 보류날짜/원라벨공란·300클립·바이트복사, 응답ID/스키마·시야범위·도구사용·실패/기권·부분집계/재시도 이력 보존을 검사한다. 새모델학습/점수평가는 하지 않았다. 선행 PR45 미병합 중 별도 로컬브랜치에 보존하며 겹치는 후속PR을 만들지 않는다.
+
+신규7개 포함 프로젝트 전체320테스트 통과(기존CORAL경고4). 최초 시스템Python의 pvlib 미설치/임시경로 문제를 구분하고 프로젝트 .venv/ASCII basetemp로 확인했다. 재실행은 기존인증/할당량 안에서만 하며 유료대체·자동계정전환은 하지 않는다.
