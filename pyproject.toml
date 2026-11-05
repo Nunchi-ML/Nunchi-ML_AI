@@ -14,7 +14,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-test = ["pytest>=8"]
+test = ["pytest>=8", "Pillow>=10"]
 ordinal = ["catboost>=1.2.8,<2", "xgboost>=3,<4", "optuna>=4,<5"]
 
 # src/nunchi_ml/ 아래 모델별 폴더(glare · tunnel · accident …)가 패키지 하나로 묶임 → import nunchi_ml.glare

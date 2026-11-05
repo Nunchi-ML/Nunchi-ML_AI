@@ -954,3 +954,88 @@ python notebooks/experiments/sun_visible_probe/sd_frame_curation.py --root ../..
 로컬 `data/sd_curation_20261105/start_here.html`에서 권장 `development_review_300/review.html`·확장후보·주차대표를 연다. 원표 판정자/최종라벨 열은 비워 두며 사용자1인 기준 진행·추가판정자 대기없음을 유지한다. 전체결정/이유/지문·품질대리값/목록·유사쌍/229전환대응·원본해시/환경을 로컬 보존한다. 17,204원프레임/기존349/입력표·실행소스 전후해시 불변/원본삭제0, 신규6개 포함전체313테스트 통과(기존CORAL경고4). 갤러리5개JS구문/3,273이미지참조 검수도 통과했다.
 
 이 단계는 데이터 준비이며 모델학습/새F1·정답검증 완료가 아니다. 메타데이터·개발라벨/최종분할을 확인하고 사진모델/동등자료 강한규칙을 비교한다. G입력이 갖춰진 경우에만 G/사진/결합을 평가한다. 전체남은작업과 새자료 정답/평가 후 최종선정한다. 공개는 실행기·테스트·집계만이며 원사진/원표/개별경로/전체출력·검토묶음/COLLAB은 로컬이다.
+
+## SD 개발300장 세 제공자 독립 참고라벨 — 2026-11-05
+
+사용자 요청으로 `sd_three_ai_labels.py`가 같은 개발300장의 원본 JPEG를 익명ID로 직접 첨부해 Claude·Gemini·GPT에 각각 판정시켰다. 동일 기준/스키마·10장×30배치·새 대화·다른 답/기존 예측 비공개이며 도구/웹/다른파일 접근은 금지한다. 배치별 첨부/프롬프트 해시·모델/사용량·원응답·실패를 private출력에 보존한다. 보류날짜는 제공하지 않으며 사람라벨/운영모델을 변경하지 않는다.
+
+| 실제 모델 | 유효응답 | 0 / 1 / 2 / abstain | 미완료 |
+|---|---:|---|---:|
+| claude-sonnet-5-5 | 150 | 125 / 23 / 0 / 2 | 150 |
+| gemini-3.8-flash-high | 110 | 103 / 7 / 0 / 0 | 190 |
+| gpt-6.1-sol | 300 | 257 / 37 / 1 / 5 | 0 |
+
+Claude Code2.1.318·AGY ACP1.5.0·CodexCLI0.166.0의 실제 응답이다. 첫10장씩 정상응답 후 제공자별 최대동시2개로 진행했다. Claude 주간한도 거절(초기화 응답2026-11-06 19:00 KST)과 Gemini individual quota 거절(응답 당시144시간36분)이 발생해 해당 제공자만 중단했다. Gemini의 비JSON 안내는 원응답에서 한도오류로 확인했고 재시도/정상라벨로 취급하지 않았다. 인증/토큰/유료대체 설정은 변경하지 않았다. 총900예정 판정 중560유효/340미완료이므로 세모델 전체완료가 아니다.
+
+공통110장은3자등급일치101/등급불일치7/기권포함2이며 나머지190장은3자비교 미완료다. 기권제외 쌍별 일치율은 Claude–Gemini108쌍 .9352(κ .6351), Claude–GPT148쌍 .9459(κ .7600), Gemini–GPT109쌍 .9541(κ .7136)이다. 표본/정상편중이 다르므로 제공자 순위나 정확도가 아니다. 심함은 GPT만1건으로 심함신뢰도/새F1을 검증하지 못한다. 카메라흐림·노출·인공등은 태양눈부심과 구분해 대안원인/불확실성으로 기록한다.
+
+로컬 `data/sd_ai_labels_20261105/`에 제공자별300행CSV(미완료 상태 포함), 비교/합의제안CSV·불일치갤러리·의미일관성 검토표·실행전기준/소스/버전·원응답/실패가 있다. 3자일치 등급과 다수결 제안을 분리하고 미완료/기권을 강제등급으로 채우지 않는다. 모두 **AI 참고의견이며 사람정답·일반사람 응답확률이 아니다**. 원17,204사진/기존349/입력7파일 전후해시 변경0, 원표·선택300장불변. 사진/개별라벨·전체산출물은 공개하지 않는다.
+
+```powershell
+python notebooks/experiments/sun_visible_probe/sd_three_ai_labels.py prepare --source data/sd_curation_20261105/development_review_300 --out <new-private-output> --inputs <new-blinded-input-directory>
+python notebooks/experiments/sun_visible_probe/sd_three_ai_labels.py run --out <private-output> --batches 1
+python notebooks/experiments/sun_visible_probe/sd_three_ai_labels.py run --out <private-output> --batches 30 --workers-per-provider 2
+python notebooks/experiments/sun_visible_probe/sd_three_ai_labels.py export --out <private-output>
+# Only after quota recovery: successful batches are never repeated;
+# the explicit retry archives prior failed attempts and keeps the same images/rubric.
+python notebooks/experiments/sun_visible_probe/sd_three_ai_labels.py run --out <private-output> --providers claude --batches 30 --retry-failed
+```
+
+단독 신규출력/원자료·출력·블라인드입력 분리, 보류날짜/원라벨공란·300클립·바이트복사, 응답ID/스키마·시야범위·도구사용·실패/기권·부분집계/재시도 이력 보존을 검사한다. 새모델학습/점수평가는 하지 않았다. 선행 PR45 미병합 중 별도 로컬브랜치에 보존하며 겹치는 후속PR을 만들지 않는다.
+
+신규7개 포함 프로젝트 전체320테스트 통과(기존CORAL경고4). 최초 시스템Python의 pvlib 미설치/임시경로 문제를 구분하고 프로젝트 .venv/ASCII basetemp로 확인했다. 재실행은 기존인증/할당량 안에서만 하며 유료대체·자동계정전환은 하지 않는다.
+
+## SD 나머지 개발1,472장 내용 검토 — 2026-11-05
+
+사용자 요청으로 `sd_content_review.py`가 보류날짜와 기존300장의 사진ID를 제외한 개발후보 **1,472장 전체**를 익명순서(seed110550)·30장씩50개 contact sheet로 만들었다. Codex가 모든 시트를 실제 열어 내용검토했고, 밝기순위/기존ML점수/다른AI답으로 선별하지 않았다. 썸네일만으로 태양원인/심함/실제운전자시야를 확정하지 않는다.
+
+| 내용검토 후보 사유 | 장수 |
+|---|---:|
+| 태양·번짐 의심 | 219 |
+| 넓은 포화/정보손실·원인불명 | 20 |
+| 밝은 출구/노출전환 혼동사례 | 19 |
+| 인공등 혼동사례 | 1 |
+| 건물 반사광 혼동사례 | 2 |
+| 합계 | 261 |
+
+이는 **261장/69클립의 검토후보**이며0/1/2 정답이나심함261장이 아니다. 무표시1,211장도 정상확정이 아니다.69클립 중62개는 이전300장에도 있던 클립(다른프레임)이며 새클립은7개뿐이다. 공유62클립의 기존300장GPT판정은0/1/2/기권28/31/1/2였다. 다른시각의 관찰후보를 기존사진의 오답으로 세지 않는다. 처음300장이 태양후보클립을 전부 놓친 것은 아니고, 추가자료에도 장면/시간/촬영 반복 한계가 있다. 독립촬영 수는 미검증이다.
+
+강한태양/포화·출구·인공등/반사광 대표24장(21클립)을 원JPEG 해상도로 추가확인했다. 태양번짐 속 주요대상이 보이는5/등급경계검토4, 밝지만주요대상이 보이는4, 노출원인불명 넓은포화1, 출구포화 원인/경계검토7, 인공등1/반사광2로 보조관찰을 나눴다. 일부 출구에서 외부가 하얗게 날아가지만 태양눈부심과 노출전환을 사진1장으로 분리하지 못한다. 정보가 없는영역에 원래물체가 있었다고 가정하거나 작은글자/흰하늘만으로2를 만들지 않았다. 초점불량·사람시야/사고위험을 진단하지 않는다. Codex/GPT계열의 보조관찰로서 추가독립판정자가 아니다.
+
+private정본 `data/sd_content_review_20261105/`에 실행전기준/소스·1472매핑/50시트·전페이지관찰·261후보/원본바이트복사·원본24관찰/갤러리·집계가 있다. 클립당1장의 **다음검토69장**은 내용근거/원본관찰을 우선하고 무작위ID로 동률처리해 별도빈등급CSV/갤러리로 준비했다. 목적표집이며 자연분포/최종시험이 아니다. 다음AI판정에는 선별메모/타답을 숨기고 익명JPEG만 사용해야 한다.
+
+중단시점163후보집계는 이미열람한31~35시트의28관찰이 도구중단으로 저장/집계되지 않은 상태였다. 이전대화의 실제열람기록으로 복원해36시트까지191, 나머지392장에서70을 더해261을 확정했다. 이전원표/사진ID/답을 덮어쓰지 않았다. 신규4개 포함전체324테스트 통과(기존CORAL경고4), 원17,204/기존349사진·입력7파일 해시변경0/삭제0·261복사본 바이트일치·보류날짜미사용/기존300라벨불변을 확인했다. 새LLM요청/학습/F1평가/운영API변경0이며 기존Claude150/Gemini190한도미완료는 유지한다.
+
+```powershell
+python notebooks/experiments/sun_visible_probe/sd_content_review.py prepare --root <private-SD-root> --candidates data/sd_curation_20261105/development_candidates.csv --previous data/sd_curation_20261105/development_review_300.csv --out <new-private-output>
+# Open every generated sheet and retain actual per-page observations first.
+python notebooks/experiments/sun_visible_probe/sd_content_review.py finalize --out <private-output> --observations <per-page-observations.json>
+```
+
+선행PR45 미병합 동안 후속코드는 로컬보존하며 겹치는 새PR/푸시·직접병합을 하지 않는다. 공개예정은 실행기·테스트·집계README뿐이고 사진/개별관찰·라벨/전체산출물·COLLAB은 로컬이다.
+
+## SD 내용 보강69장 GPT 참고판정 — 2026-11-05 실행·11-06 검증
+
+`sd_supplement_labels.py`는 내용검토261후보에서 준비한69클립69장을 별도 익명 입력으로 만든다. 기존300장의 사진ID/바이트 중복0, 보류날짜 제외·원등급 공란·개발목록/원JPEG SHA256·클립 고유성을 검증한다. 기존 동결 `sd_three_ai_labels.py`의 동일 기준/스키마·제공자 어댑터를 재사용하고 선별메모/다른 답/원파일명은 숨긴다. seed110569·10장씩6배치+9장1배치이며 성공배치는 반복하지 않는다. 사람원표·기존300응답·운영모델은 유지한다.
+
+| 실제 모델 | 새 유효응답 | 0 / 1 / 2 / abstain | 새 미완료 |
+|---|---:|---|---:|
+| gpt-6.1-sol (CodexCLI0.166.0) | 69 | 22 / 43 / 3 / 1 | 0 |
+| claude-sonnet-5-5 | 0 | — | 69 |
+| gemini-3.8-flash-high | 0 | — | 69 |
+
+Claude/Gemini는 기존 실제 한도거절 근거와 초기화 시각을 상속해 **새 요청을 하지 않았다**. CSV는 `not_requested_known_quota`이며 등급 공란, 새 실패배치/가짜 응답을 만들지 않는다. Claude 응답의 초기화는2026-11-06 19:00 KST, Gemini는 기존 응답 당시144시간36분이다. 원한도 근거의 SHA256을 검사하며 이번 private출력에는 이후 기존300 재개에 대비한 근거 복사본/원경로/변경 전 메타데이터도 보존했다. 성공 GPT7배치/69응답, 새138+기존340=총478판정이 남는다. 인증/계정·유료대체 설정 변경은 없다.
+
+GPT심함3/보류1의 원본을 다시 열어 보조감사했다. 심함3장은 가까운차량/경계가 남는 태양포화 등급경계 사례이고, 보류1은 전방 주행방향 불명인 비도로 장면이다. 원GPT등급을 유지하며 교차검토 대상으로 남긴다. 같은 GPT계열의 사후검토는 독립판정자가 아니다. 심함3장은3클립/파일명날짜2묶음으로, 같은날짜2장은 파일명+프레임 추정시각33초·화면시계32초 간격이다. 두 시계 모두 미검증이며 독립주행3건/확정심함3건으로 세지 않는다.
+
+69장 중62클립은 기존300과 공유하는 다른 프레임이며 신규클립은7개다. 목적표집의 새양성46/69를 기존38/300과 비교해 실제유병률/표본대표성/모델개선으로 주장하지 않는다. GPT전체369장의 재고 집계는0/1/2/기권279/80/4/6이지만 평가셋으로 합치지 않았다. 3자합의69장 모두 미완료, 학습/새F1평가0·최종선정보류다.
+
+private `data/sd_supplement_labels_20261105/`에 입력/기준·소스/해시·첨부/원응답/실행버전·제공자CSV/미요청상태·비교/합의보류·분석/검증을 보존했다. `gpt_review_69.html`은69원본과GPT의견, `priority_review_4.html`은심함/보류4장이다. 이미지73참조 누락0,69행 고유ID/미요청 공란·합의공란, 새69/기존300 입력·첨부바이트/소스 불변을 확인했다. 신규5개 포함 전체329테스트 통과(기존CORAL경고4). 사진·개별판정·전체출력은 로컬이며 공개대상은 실행기/테스트/집계README3파일뿐이다. PR45 OPEN/main cd9709d fetch 재확인으로 로컬보존·겹치는후속PR/푸시 없음.
+
+```powershell
+python notebooks/experiments/sun_visible_probe/sd_supplement_labels.py prepare --source data/sd_content_review_20261105 --development data/sd_curation_20261105/development_candidates.csv --previous data/sd_curation_20261105/development_review_300.csv --quota-source data/sd_ai_labels_20261105 --out <new-private-output> --inputs <new-blinded-input-directory>
+python notebooks/experiments/sun_visible_probe/sd_supplement_labels.py run --out <private-output> --providers gpt --batches 7 --workers 2
+# After each provider's quota recovery only; existing successful batches are retained.
+python notebooks/experiments/sun_visible_probe/sd_supplement_labels.py run --out <private-output> --providers claude --batches 7 --workers 2
+python notebooks/experiments/sun_visible_probe/sd_supplement_labels.py export --out <private-output>
+```
