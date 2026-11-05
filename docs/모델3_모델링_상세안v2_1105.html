@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>모델③ 모델링 상세안 v2</title>
+<style>
+:root{
+  --bg:#fbfaf7; --card:#ffffff; --ink:#1d1d1b; --sub:#5b5a55; --line:#e3e0d8;
+  --accent:#2f5d8a; --accent-soft:#e6eef6; --warn:#a24a1d; --warn-soft:#fbeee6;
+  --ok:#2e6b3f; --ok-soft:#e7f2ea; --mute-soft:#f1efe9; --code:#f4f2ec;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#171716; --card:#20201e; --ink:#ecebe6; --sub:#a9a79f; --line:#36352f;
+    --accent:#8db6df; --accent-soft:#1f2c39; --warn:#e79a6f; --warn-soft:#3a271c;
+    --ok:#8cc79c; --ok-soft:#1d2e22; --mute-soft:#2a2926; --code:#2a2926;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#171716; --card:#20201e; --ink:#ecebe6; --sub:#a9a79f; --line:#36352f;
+  --accent:#8db6df; --accent-soft:#1f2c39; --warn:#e79a6f; --warn-soft:#3a271c;
+  --ok:#8cc79c; --ok-soft:#1d2e22; --mute-soft:#2a2926; --code:#2a2926;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.75 "Pretendard","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif}
+main{max-width:920px;margin:0 auto;padding:32px 16px 80px}
+h1{font-size:28px;line-height:1.3;margin:0 0 6px}
+h2{font-size:22px;margin:56px 0 12px;padding-top:12px;border-top:2px solid var(--line)}
+h3{font-size:17px;margin:28px 0 8px}
+p{margin:8px 0}
+.sub{color:var(--sub);font-size:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin:14px 0}
+.key{background:var(--accent-soft);border-color:transparent}
+.warn{background:var(--warn-soft);border-color:transparent}
+.ok{background:var(--ok-soft);border-color:transparent}
+.tag{display:inline-block;font-size:12px;padding:1px 8px;border-radius:99px;background:var(--mute-soft);color:var(--sub);margin-left:4px;vertical-align:2px}
+.tag.v{background:var(--ok-soft);color:var(--ok)}
+.tag.u{background:var(--warn-soft);color:var(--warn)}
+table{width:100%;border-collapse:collapse;font-size:14.5px;margin:10px 0}
+th,td{border-bottom:1px solid var(--line);padding:8px 8px;text-align:left;vertical-align:top}
+th{color:var(--sub);font-weight:600;background:var(--mute-soft)}
+.scroll{overflow-x:auto}
+code{background:var(--code);padding:1px 5px;border-radius:4px;font-size:13.5px}
+pre{background:var(--code);padding:12px 14px;border-radius:8px;overflow-x:auto;font-size:13.5px;line-height:1.6}
+ol,ul{padding-left:22px}
+li{margin:4px 0}
+nav a{color:var(--accent);text-decoration:none}
+nav ol{columns:2;column-gap:28px;font-size:14.5px}
+@media (max-width:640px){nav ol{columns:1}}
+svg{max-width:100%;height:auto;display:block}
+svg text{fill:var(--ink);font-family:inherit}
+.bx{fill:var(--card);stroke:var(--line);stroke-width:1.5}
+.bx-a{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.5}
+.bx-w{fill:var(--warn-soft);stroke:var(--warn);stroke-width:1.5}
+.bx-o{fill:var(--ok-soft);stroke:var(--ok);stroke-width:1.5}
+.ar{stroke:var(--sub);stroke-width:1.6;fill:none;marker-end:url(#h)}
+.ar-a{stroke:var(--accent);stroke-width:1.8;fill:none;marker-end:url(#ha)}
+.small{font-size:12px;fill:var(--sub)}
+.bar{display:inline-block;height:10px;border-radius:3px;background:var(--accent);vertical-align:middle}
+.bar.w{background:var(--warn)}
+.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+.slide{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px 22px;margin:22px 0}
+.slide>h2{border:0;margin:0 0 4px;padding:0}
+.say{border-left:4px solid var(--accent);padding:4px 12px;margin:10px 0;color:var(--ink);background:var(--accent-soft);border-radius:0 8px 8px 0}
+.n{display:inline-block;min-width:26px;height:26px;line-height:26px;text-align:center;border-radius:99px;background:var(--accent);color:var(--card);font-size:13px;font-weight:700;margin-right:6px}
+</style>
+</head>
+<body>
+<main>
+<h1>모델③ 모델링 상세안 v2</h1>
+<p class="sub">2026-11-05 · 터널 안 보이는 사진도 학습에 쓰는 안 반영 · 주 모델 정하는 법과 "이겼다" 기준 제안 포함 · 등급 기준(10배·15배)은 초안</p>
+
+<div class="card key">
+<p><b>한 줄 요약</b></p>
+<p>사진(또는 해 높이·구름)으로 터널 앞 바깥 밝기를 추정하고, 지침 공식으로 휘도비 → 위험도 상·중·하로 바꿉니다.
+규칙 5개와 ML 4개를 <b>같은 학습 사진, 같은 시험 사진, 같은 채점</b>으로 비교합니다.
+주 시험은 <b>71786 카메라 사진으로 학습 → 한 번도 안 본 Mapillary 카메라 사진으로 채점</b>입니다.</p>
+</div>
+
+<div class="card warn">
+<p><b>이전 상세판(1105)과 달라진 점</b></p>
+<ul>
+<li>이전 상세판은 <b>터널 사진만</b> 학습한다는 전제로 썼습니다. 터널 안 보이는 사진 학습은 반영되지 않았습니다.</li>
+<li>이번 안: 정답이 위성 일사량이라 터널이 안 보여도 바깥 밝기를 배울 수 있으므로, <b>터널 없는 고속도로 사진도 학습</b>에 넣습니다. 채점은 그대로 <b>터널 입구·출구 사진으로만</b> 합니다.</li>
+<li>시험이 2개에서 4개로 늘었습니다 (주 시험 1 + 겨울 보충 1 + 참고 2).</li>
+<li>"이겼다"는 기준과 주 모델 정하는 순서를 결과 보기 전에 고정합니다.</li>
+</ul>
+</div>
+
+<nav class="card"><ol>
+<li><a href="#s1">데이터 묶음</a></li>
+<li><a href="#s2">정답 만들기</a></li>
+<li><a href="#s3">사진 숫자 10개</a></li>
+<li><a href="#s4">모델별 입력과 학습</a></li>
+<li><a href="#s5">시험 4개</a></li>
+<li><a href="#s6">채점 3개</a></li>
+<li><a href="#s7">"이겼다" 기준</a></li>
+<li><a href="#s8">주 모델 정하기</a></li>
+<li><a href="#s9">약점과 대응</a></li>
+<li><a href="#s10">계획</a></li>
+</ol></nav>
+
+<h2 id="s1">1. 데이터 묶음</h2>
+<p>사진은 세 곳에서 옵니다. 터널이 보이는 사진만 채점에 쓰고, 나머지는 학습에만 씁니다.</p>
+<div class="scroll"><table>
+<tr><th>묶음</th><th>어디서</th><th>장수(예상)</th><th>터널 보임</th><th>쓰임</th><th>찍은 달</th></tr>
+<tr><td>A. 71786 터널 사진</td><td>AI Hub 71786 고속도로 원천 (TS_1 1,619 + VS_1 340)</td><td>약 1,960</td><td>예 (거의 전부 입구)</td><td>학습</td><td>2023년 8~9월</td></tr>
+<tr><td>B. 71786 터널 없는 고속도로 사진</td><td>같은 원천, 터널 안 보이는 구간 (TS_1 1,379 + VS_1 322)</td><td>약 1,700</td><td>아니요</td><td>학습</td><td>2023년 8~9월</td></tr>
+<tr><td>C. Mapillary 터널 사진</td><td>Mapillary, 고속도로 터널 주변 (형 분류 완료)</td><td>211 (입구 66 · 출구 27 · 터널 없음 등 118)</td><td>입구·출구 93장만</td><td><b>채점</b> (입구·출구 93장) · 나머지는 시험 ①에서만 학습</td><td>여러 해 · 여러 달</td></tr>
+<tr><td>D. Mapillary 터널 없는 고속도로 사진</td><td>08 노트북 (터널에서 떨어진 고속도로 1,500곳, 달 × 시간대 고르게)</td><td>약 2,000</td><td>아니요</td><td>시험 ②b 학습 (겨울 보충)</td><td>1~12월</td></tr>
+</table></div>
+<p>모든 사진은 <b>낮 사진만</b> 씁니다 (천리안 일사량 E &gt; 0.05). 장면(같은 터널을 같은 날 연달아 찍은 묶음)을 하나의 단위로 다룹니다. 같은 장면이 학습과 채점에 동시에 들어가지 않습니다.</p>
+
+<h2 id="s2">2. 정답 만들기 (모든 모델 공통)</h2>
+<ol>
+<li>사진의 <b>촬영 시각 + GPS</b>로 천리안 위성 일사량 E를 받습니다 (그 자리, 그 시각).</li>
+<li>바깥 밝기 L20 = E × 277.8 × 126 × 0.15 ÷ π (cd/m²). 학습 정답 y = log10(L20).</li>
+<li>위험도 정답: 휘도비 R = L20 ÷ (280 × 조광 단계) (입구) 또는 L20 ÷ 45 (출구) → R &lt; 10 하, 10~15 중, 15 초과 상.</li>
+</ol>
+<p class="sub">촬영 시각·GPS는 정답을 만드는 데 쓰입니다. 규칙4·5와 사진X ML은 같은 시각·GPS에서 계산한 "해 높이", ASOS "구름 양"을 입력으로 씁니다. 정답(위성 일사량) 자체를 입력으로 쓰는 모델은 없습니다.</p>
+
+<h2 id="s3">3. 사진 숫자 10개</h2>
+<p>사진 한 장을 640픽셀로 줄인 뒤 아래 숫자를 뽑습니다. 사진 묶음과 상관없이 같은 함수입니다.</p>
+<div class="scroll"><table>
+<tr><th>숫자</th><th>뜻</th><th>터널 없는 사진</th></tr>
+<tr><td>sky_mean</td><td>위 1/3 평균 밝기</td><td>그대로 계산</td></tr>
+<tr><td>blue_sky</td><td>위 1/3 중 파란 하늘 비율</td><td>그대로</td></tr>
+<tr><td>white_ratio</td><td>하얗게 날아간 픽셀 비율</td><td>그대로</td></tr>
+<tr><td>shadow_contrast</td><td>도로 부분 밝은 곳 − 어두운 곳 (그림자 진하기)</td><td>그대로</td></tr>
+<tr><td>road_mean</td><td>아래 1/3 평균 밝기</td><td>그대로</td></tr>
+<tr><td>sky_road_ratio</td><td>하늘 ÷ 도로 밝기</td><td>그대로</td></tr>
+<tr><td>portal_ratio</td><td>입구 둘레 ÷ 입구 구멍 밝기 (로그)</td><td><b>빈칸</b> (입구가 없으니까)</td></tr>
+<tr><td>saturation</td><td>색 진하기</td><td>그대로</td></tr>
+<tr><td>spread</td><td>밝기 퍼짐 (상위 5% − 하위 5%)</td><td>그대로</td></tr>
+<tr><td>mean_all</td><td>전체 평균 밝기 (자동 노출 영향 큼, 비교용)</td><td>그대로</td></tr>
+</table></div>
+<p>71786은 라벨에 터널 다각형이 있어서, portal_ratio의 "구멍"을 다각형 안에서 가장 어두운 15%로 잡습니다. Mapillary는 다각형이 없어서 가운데 영역에서 가장 어두운 15%로 잡습니다. 그 밖의 숫자는 두 묶음에서 똑같이 계산합니다.</p>
+
+<h2 id="s4">4. 모델별 입력과 학습</h2>
+<p>모든 모델은 바깥 밝기 log10(L20)를 예측합니다. 예측값은 2번과 같은 공식으로 위험도로 바꿔 채점합니다. 즉 위험도를 직접 맞히는 모델은 없고, <b>밝기를 맞히면 위험도는 공식이 정합니다</b>.</p>
+<div class="scroll"><table>
+<tr><th>모델</th><th>입력</th><th>학습하는 것</th><th>터널 없는 사진 사용</th><th>주의할 점</th></tr>
+<tr><td><b>규칙1</b> 손 규칙</td><td>사진 숫자 6개</td><td>없음. 점수표(파란 하늘 &gt; .2 이면 +2 등)와 점수 → 밝기(500~5,000) 변환을 데이터 보기 전에 고정</td><td>학습이 없어 상관없음</td><td>사람 감으로 만든 기준선</td></tr>
+<tr><td><b>규칙2</b> 경계값 학습</td><td>사진 숫자 6개</td><td>점수표 모양은 같고, 경계값 = 학습 사진의 중앙값, 점수별 평균 밝기</td><td>예 (경계·평균 계산에 포함)</td><td>"규칙도 데이터로 다듬으면 어디까지 가나"</td></tr>
+<tr><td><b>규칙3</b> 숫자 하나 직선</td><td>사진 숫자 1개</td><td>10개 숫자마다 직선을 그어 보고, 학습 사진에서 오차가 가장 작은 숫자 하나 선택</td><td>예. 단 portal_ratio를 고르면 그 직선은 터널 사진으로만 그음</td><td>가장 단순한 통계 규칙</td></tr>
+<tr><td><b>규칙4</b> 물리 공식</td><td>해 높이, 구름 양 (사진 X)</td><td>없음. Haurwitz(1945) 맑은 하늘 공식 × Kasten & Czeplak(1980) 구름 감쇠</td><td>학습 없음</td><td>문헌 공식 그대로</td></tr>
+<tr><td><b>규칙5</b> 계절·구름 표</td><td>달, 구름 양 (사진 X)</td><td>계절 4 × 구름 3칸 = 12칸, 칸마다 학습 사진 평균 밝기</td><td>예</td><td>71786만 학습하면 여름·가을 칸만 생김 → 겨울·봄 사진은 전체 평균으로 예측 (시험 ②b로 보완)</td></tr>
+<tr><td><b>선형회귀</b></td><td>사진 숫자 10개</td><td>숫자마다 가중치 (Ridge). 빈칸은 학습 사진 중앙값으로 채움</td><td>예</td><td>숫자끼리 조합은 못 봄</td></tr>
+<tr><td><b>LightGBM (사진)</b></td><td>사진 숫자 10개</td><td>나무 300그루 (잎 7개, 학습률 .03). 빈칸은 나무가 알아서 따로 처리</td><td>예</td><td>"사진만 있을 때" ML</td></tr>
+<tr><td><b>LightGBM (사진X)</b></td><td>해 높이, 구름 양, 달</td><td>같은 설정의 나무</td><td>예 (사진 숫자는 안 쓰지만 시각·구름 예시가 늘어남)</td><td>규칙4·5와 같은 정보 → "ML 효과"만 따로 봄</td></tr>
+<tr><td><b>LightGBM+</b></td><td>사진 숫자 10개 + 해 높이 + 구름 양</td><td>같은 설정의 나무</td><td>예</td><td>사진X와 비교해 "사진이 보태는 몫"을 봄</td></tr>
+</table></div>
+
+<h3>비교 질문 3개</h3>
+<div class="scroll"><table>
+<tr><th>질문</th><th>ML 쪽</th><th>비교 대상</th><th>뜻</th></tr>
+<tr><td>Q1. 사진만 있을 때</td><td>LightGBM (사진)</td><td>규칙1·2·3 (선형은 참고)</td><td>같은 사진 숫자로 ML이 규칙보다 잘 맞히나</td></tr>
+<tr><td>Q2. 시각·날씨만 있을 때</td><td>LightGBM (사진X)</td><td>규칙4·5</td><td>같은 정보로 ML이 공식·표보다 잘 맞히나</td></tr>
+<tr><td>Q3. 사진이 보태나</td><td>LightGBM+</td><td>LightGBM (사진X)</td><td>시각·날씨에 사진을 더하면 나아지나</td></tr>
+</table></div>
+
+<h2 id="s5">5. 시험 4개</h2>
+<div class="scroll"><table>
+<tr><th>시험</th><th>학습</th><th>채점</th><th>역할</th></tr>
+<tr><td><b>②a 처음 보는 카메라 (주 시험)</b></td><td>71786 A + B (약 3,660장)</td><td>Mapillary C의 입구·출구 93장 (66장면)</td><td><b>결론은 이 시험으로만 냅니다.</b> 카메라가 달라도 통하는지 봄</td></tr>
+<tr><td>②b 겨울 보충</td><td>71786 A + B + Mapillary D (약 5,660장)</td><td>같은 93장</td><td>71786에 없는 겨울·봄을 채우면 나아지는지. D는 터널에서 500 m 이상 떨어진 곳이라 채점 사진과 장면이 안 겹침</td></tr>
+<tr><td>① Mapillary 안 시험 (참고)</td><td>Mapillary C(+D) 중 4/5 장면</td><td>나머지 1/5 장면의 입구·출구 사진</td><td>같은 카메라 안. 5겹 × 10번 반복 평균</td></tr>
+<tr><td>③ 71786 안 시험 (참고)</td><td>71786 중 4/5 장면</td><td>나머지 1/5 장면의 입구 사진</td><td>71786 안에서 얼마나 배우는지. 5겹 × 5번</td></tr>
+</table></div>
+<p class="sub">②b와, 시험 결과를 비교 짝별로 묶어 계산하는 부분(7번)은 07에 칸을 추가해야 합니다. 형이 지금 06·07을 돌리는 중이라, 끝난 다음에 고치겠습니다 (열려 있는 파일을 덮어쓰지 않도록).</p>
+
+<h2 id="s6">6. 채점 3개</h2>
+<div class="scroll"><table>
+<tr><th>채점</th><th>계산</th><th>읽는 법</th></tr>
+<tr><td><b>위험도 F1 (주 지표)</b></td><td>예측 밝기 → 공식 → 상·중·하. 정답 등급과 비교해 등급마다 F1을 내고 셋을 평균 (macro-F1)</td><td>1에 가까울수록 좋음. 전부 "상"이라고 찍으면 약 .25. <b>최종 목표(위험도 알림)에 가장 가까운 점수</b></td></tr>
+<tr><td>순위상관 (Spearman)</td><td>예측 밝기 순위와 정답 밝기 순위가 얼마나 같은 순서인가</td><td>1이면 순서 완벽. 등급 경계와 상관없이 "더 밝은 날을 더 밝다고" 하는지</td></tr>
+<tr><td>MAE (log)</td><td>|예측 log10(L20) − 정답| 평균</td><td>작을수록 좋음. 0.1 ≈ 평균 26% 차이, 0.3 ≈ 2배 차이</td></tr>
+</table></div>
+<p>F1과 함께 늘 같이 적는 것:</p>
+<ul>
+<li><b>"중" 장수:</b> 93장 중 "중"이 12장뿐이라, 몇 장만 더 맞혀도 F1이 크게 흔들립니다.</li>
+<li><b>95% 범위:</b> 채점 장면을 다시 뽑아 1,000번 계산한 범위입니다.</li>
+<li><b>경계 근처 정확도:</b> 조광 때문에 휘도비가 14 근처에 몰려서, 93장 중 62장이 경계(10·15배) 근처에 있습니다.</li>
+</ul>
+
+<h2 id="s7">7. "이겼다" 기준 (제안, 결과 보기 전에 고정)</h2>
+<div class="card ok">
+<p><b>시험 ②a에서 아래 세 가지를 모두 만족하면 "이겼다"</b></p>
+<ol>
+<li><b>위험도 F1이 비교 대상보다 0.05 이상 높다.</b></li>
+<li><b>차이의 95% 범위가 0보다 크다:</b> 같은 채점 사진에서 장면을 다시 뽑아 "ML F1 − 규칙 F1"을 1,000번 계산하고, 하위 2.5%가 0보다 커야 합니다.</li>
+<li><b>순위상관과 MAE도 같은 방향이다:</b> 순위상관은 더 높고, MAE는 더 낮아야 합니다.</li>
+</ol>
+<p>반대 방향으로 셋을 다 만족하면 "졌다", 그 밖은 "<b>비슷하다</b>"고 적습니다.</p>
+<p>Q1·Q2는 그 묶음의 <b>규칙 전부</b>를 이겨야 "이겼다"입니다. 시험 결과를 보고 가장 약한 규칙을 골라 비교하면 반칙이 되기 때문입니다.</p>
+</div>
+<p><b>왜 이렇게 정하나</b></p>
+<ul>
+<li><b>0.05:</b> 93장에서 "중" 1~2장을 더 맞히면 바뀌는 정도입니다. 이보다 작은 차이는 우연과 구분하기 어렵습니다.</li>
+<li><b>95% 범위를 "차이"로 보는 이유:</b> 두 모델의 범위가 서로 안 겹치는지만 보면 너무 엄격합니다. 같은 사진으로 채점했으니 차이를 직접 보는 게 맞습니다.</li>
+<li><b>순위상관·MAE를 같이 보는 이유:</b> F1은 경계 근처 몇 장에 흔들립니다. 밝기 자체도 더 잘 맞혔는지 확인합니다.</li>
+<li><b>지금 고정하는 이유:</b> 결과를 본 뒤에 기준을 정하면, 유리한 기준을 고른 것처럼 보입니다.</li>
+</ul>
+
+<h2 id="s8">8. 주 모델 정하기 (제안)</h2>
+<p><b>주 모델</b> = 발표에서 "모델③은 이걸로 바깥 밝기를 추정해 위험도를 알린다"고 내세울 모델 하나. ML이 4개라 대표 하나를 정해야 함.</p>
+<div class="scroll"><table>
+<tr><th>후보</th><th>넣는 것</th><th>예</th></tr>
+<tr><td><b>㉠ 사진X ML</b> (LightGBM 사진X)</td><td>해 높이(촬영 시각·GPS로 계산), 구름 양(근처 기상청 관측소), 달. 사진은 안 봄</td><td>"8월 오후 2시, 해 높이 55도, 구름 2" → 바깥 밝기 4,800</td></tr>
+<tr><td><b>㉡ 사진+ ML</b> (LightGBM+)</td><td>㉠의 해 높이·구름 + 사진 숫자 10개</td><td>같은 조건인데 사진 하늘이 뿌옇다 → "구름 2라는데 흐려 보이네" → 밝기를 낮춰 추정</td></tr>
+</table></div>
+<p><b>고민인 이유</b>: 형 파트 주제(사진 → 바깥 밝기)에는 ㉡이 맞지만, Mapillary 안 시험에서 ㉠ .73, ㉡ .71로 사진을 더해도 나아지지 않았음. 보탬이 없는데 ㉡을 쓰면 "사진 빼도 같은데 왜 넣었나?"를 막기 어려움.</p>
+<div class="card key">
+<p><b>순서 (결과 보기 전에 고정)</b></p>
+<ol>
+<li>시험 ②a에서 <b>Q3 (㉡ vs ㉠)</b>를 봄</li>
+<li>㉡이 7번 기준으로 <b>이기면</b> → 주 모델 = <b>㉡</b>. "사진이 시각·날씨 정보에 더 보탠다"고 주장</li>
+<li><b>비슷하거나 지면</b> → 주 모델 = <b>㉠</b>. 사진은 버리지 않고, 사진만 쓰는 ML(LightGBM 사진)을 "인터넷·날씨 정보 없이 카메라만 있을 때의 대안"으로 보고 (Q1: 사진 규칙1~3보다 나은가)</li>
+<li>②b에서 순위가 바뀌면 같이 적되, 결정은 ②a로</li>
+</ol>
+<p class="sub">미리 고정하는 이유: 결과를 보고 유리한 쪽을 고른 것처럼 보이지 않게.</p>
+</div>
+<div class="card warn">
+<p><b>비판적으로 보면</b></p>
+<ul>
+<li>지금까지 Mapillary 안 시험(①)에서는 사진X .73, LightGBM+ .71로, <b>사진이 보태는 게 없었습니다</b>. 71786은 카메라가 달라 사진 숫자가 더 흔들릴 수 있으니, ②a에서도 사진X가 앞설 가능성이 큽니다.</li>
+<li>그러면 "사진 → 바깥 밝기"라는 형 파트의 주제가 약해집니다. 그래도 결과는 그대로 보고하는 게 맞습니다. "위성 정답에는 해 높이·구름이 거의 다 설명하고, 사진 숫자 10개로는 더 못 보탰다"는 것도 결과입니다.</li>
+<li>사진이 지는 이유 중 하나는 정답 자체가 위성 2 km·1시간 단위라는 점입니다. 사진이 그 자리의 구름 그림자를 봐도, 정답이 그걸 담지 못합니다. 발표 한계에 넣을 내용입니다.</li>
+<li>되는 방안: 시간이 있으면 사진 숫자를 보강해 볼 수 있습니다. 예를 들어 해 방향 그림자 길이, 하늘 영역만 따로 잘라 본 구름 비율입니다. 단, 7번 기준은 그대로 두고 "보강판"으로 따로 적습니다.</li>
+</ul>
+</div>
+
+<h2 id="s9">9. 약점과 대응</h2>
+<div class="scroll"><table>
+<tr><th>약점</th><th>영향</th><th>대응</th></tr>
+<tr><td>71786은 8~9월 35일뿐</td><td>겨울·봄 낮은 해를 못 배움. 규칙5는 겨울·봄 칸이 비고, ML도 "달"을 넘어서 추측</td><td>시험 ②b (Mapillary D로 1~12월 채움). 해 높이가 계절을 대신 담아서 피해는 줄어듦</td></tr>
+<tr><td>71786 기후 칸이 전부 "맑음"</td><td>날씨 칸만 보면 흐린 날이 없는 것처럼 보임</td><td>ASOS 전운량으로 다시 보면 흐림(8~10) 36% → 흐린 날도 배움. 구름은 ASOS 값을 씀</td></tr>
+<tr><td>채점 사진 93장, "중" 12장</td><td>F1이 크게 흔들림</td><td>95% 범위, 차이 범위, "중" 장수를 같이 보고. 기준 0.05</td></tr>
+<tr><td>조광 때문에 휘도비가 14 근처에 몰림</td><td>경계 근처 사진이 많아 등급이 쉽게 바뀜</td><td>경계 근처 정확도를 따로 적음. 순위상관·MAE를 같이 봄</td></tr>
+<tr><td>71786에는 출구 사진이 거의 없음</td><td>출구는 학습을 거의 못 함</td><td>출구 공식(÷45)은 밝기만 맞히면 되므로 영향 작음. 출구 성능은 Mapillary 27장으로만 말함</td></tr>
+<tr><td>71786 카메라 1기종</td><td>다른 카메라 일반화는 Mapillary로만 확인</td><td>②a가 바로 그 시험</td></tr>
+<tr><td>Schreuder 원문·155 m 출처 미확인</td><td>등급 기준 근거 약함</td><td>"초안"으로 표기 유지</td></tr>
+</table></div>
+
+<h2 id="s10">10. 계획 (발표 11/10)</h2>
+<div class="scroll"><table>
+<tr><th>날짜</th><th>할 일</th><th>누가</th></tr>
+<tr><td>11/5</td><td>06 (71786 사진 꺼내기 · 입구출구 · 천리안) → 07 실행. 결과를 실험 기록 표에 올림</td><td>형 실행 · Claude 해석</td></tr>
+<tr><td>11/5~6</td><td>07에 ②b와 "차이 95% 범위" 칸 추가. 08 (Mapillary 터널 없는 사진) 실행</td><td>Claude 코드 · 형 실행</td></tr>
+<tr><td>11/6</td><td>07 재실행 → 7번 기준으로 Q1·Q2·Q3 판정 → 8번 순서로 주 모델 확정</td><td>형 · Claude</td></tr>
+<tr><td>11/7</td><td>노션·슬랙·PPT 스토리 반영. 09 (사고 확인) 등급 숫자 기획안 반영</td><td>Claude (팀 스레드 통해)</td></tr>
+<tr><td>11/8~9</td><td>발표 자료 · 한계 정리 (정답 해상도, 8~9월, "중" 적음)</td><td>형 · 팀</td></tr>
+<tr><td>11/10</td><td>발표</td><td>팀</td></tr>
+</table></div>
+</main>
+
+</body>
+</html>
