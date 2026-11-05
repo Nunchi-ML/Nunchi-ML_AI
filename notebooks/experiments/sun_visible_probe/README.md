@@ -780,3 +780,20 @@ python notebooks/experiments/sun_visible_probe/conditional_augmentation_probe.py
 ```
 
 각명령은새출력폴더만허용한다. 로컬정본에실행전기준·소스/버전·입력/원본해시·모든평가/내부출력·선택·전체지표/CM·군집구간/report를보존했다. 전체273테스트(이번검증17개추가)통과·기존CORAL경고4개. 규칙벡터화재현·촬영분리·평가라벨영향차단·A/B단계불변·양성전용학습·추가풀ID/사진/촬영누출을검사했다. 공개는코드3/테스트3/집계README만,원자료·사람별라벨·전체예측·COLLAB제외. 최종선정/운영교체보류유지.
+
+## 공통 평가 지표·저장 확률 재평가 — 2026-11-05
+
+모델② 새실험은 `nunchi_ml.glare.evaluation.evaluate_grades`로 실제최종pred와3클래스확률을함께평가한다. Macro/Weighted F1·Accuracy·등급별P/R/F1/support·CM·QWK·MAE·0↔2를기본기록하고,확률이있으면macro/class OvR AUC/AP·눈부심A/전체심함/양성조건부B AUC/AP·Log loss/Brier를추가한다. 조건부B는원양성사진에서만계산하며실제저장B가없고P(양성)=0이면임의값을채우지않는다. AP는average precision,다중Brier는평균3클래스제곱오차합(0~2). 확률지표존재가보정완료나사람평가확률을뜻하지않는다.
+
+```python
+from nunchi_ml.glare.evaluation import evaluate_grades
+result = evaluate_grades(y_true, final_pred, probabilities=p012, conditional_severe=b)
+```
+
+```powershell
+python notebooks/experiments/sun_visible_probe/saved_metric_audit.py --out data/evaluation_metrics_20261105_v3
+```
+
+출력은새폴더만허용한다. 기존14결과폴더/3687회차·모델·평가셋조합에서2943개는저장확률지표추가,744개는미저장으로명시했다. 원예측을확률로변환해AUC를꾸미지않고단일클래스순위지표는미정의로둔다. 일부사진만있는확률로전체지표를만들지않는다. 비표준파일은inventory에서별도표시하며전과거실험을완전포괄했다는뜻은아니다. 이작업은재학습/기준선택없이기존F1을재현한사후진단이다.
+
+최신후보의macro OvR AUC .81272→.82703/양성조건부B AUC .74090→.78567이나Log loss .83496→.85824악화. AUC만으로개선을선언하지않는다. 최종F1·심함누락·확률품질/촬영일반화를함께본다. 원실험동결소스/해시는유지하고sidecar에전체지표/summary/coverage·입력/소스해시/재현확인을보존했다. float32수준반올림만범위를정해정규화하고크기를기록하며이상확률은거절한다. 전체284테스트통과(기존CORAL경고4개). 현재운영/API·원라벨·최종선정보류유지.
