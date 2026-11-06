@@ -4,7 +4,7 @@
 
 # Nunchi-ML_AI
 
-데이터 정제 · EDA · 모델 ① 통합 안내 · 모델 ② 전방 식별 저하 분류 · 모델 ③ 밝기 전환 순응 부담
+데이터 정제 · 실험 · 태양광 눈부심 분류 · 밝기 전환 부담 · 통합 주행 안내
 
 ![Python](https://img.shields.io/badge/Python-3776AB?style=flat-square&logo=python&logoColor=white) ![pandas](https://img.shields.io/badge/pandas-150458?style=flat-square&logo=pandas&logoColor=white) ![scikit--learn](https://img.shields.io/badge/scikit--learn-F7931E?style=flat-square&logo=scikitlearn&logoColor=white) ![LightGBM](https://img.shields.io/badge/LightGBM-2E7D32?style=flat-square) ![GeoPandas](https://img.shields.io/badge/GeoPandas-139C5A?style=flat-square) ![OpenCV](https://img.shields.io/badge/OpenCV-5C3EE8?style=flat-square&logo=opencv&logoColor=white) ![pvlib](https://img.shields.io/badge/pvlib-F2522E?style=flat-square) ![SHAP](https://img.shields.io/badge/SHAP-FF0D57?style=flat-square) ![Optuna](https://img.shields.io/badge/Optuna-2C5BB4?style=flat-square)
 
@@ -16,7 +16,18 @@
 
 ## 👥 담당
 
-데이터 엔지니어 A · B, AI 엔지니어 A · B
+이성진(태양광 눈부심 분류) · 최재혁(밝기 전환 부담) · 박범수(통합 주행 안내) · 권수영(데이터·문서)
+
+## 🧭 한눈에 보기
+
+| 모델 | 하는 일 | 상태 | 담당 |
+|---|---|---|---|
+| ☀️ **태양광 눈부심 분류** (모델②) | 전방 사진 + 해 위치·날씨로 정상·눈부심·심함 3등급 판정 | 발표 모델 선정 (2단계 로지스틱 회귀) · API 시제품 | 이성진 |
+| 🚇 **밝기 전환 부담** (모델③) | 터널·지하차도 입구 사진으로 바깥 밝기와 입구 위험도(하·중·상) 추정 | 대표 모델 확정 (추정 밝기 + 2단계 로지스틱) | 최재혁 |
+| 🧭 **통합 주행 안내** (모델①) | 두 모델의 결과를 위치·시각·진행 방향에 맞춰 지도·경고로 연결 | 개발 중 (역할·출력 확정 전) | 박범수 |
+
+> 아래 「현재 서비스 목적」부터는 실험 경계와 재현 방법을 자세히 적은 기록입니다. 수치와 판단의 정본은 노션 [모델링 계획서](https://app.notion.com/p/01e2ae67f0e74a8ab5dc8bf3e1576011)입니다.
+
 
 ## 🧭 현재 서비스 목적 · 2026-11-04 사용자 확정
 
@@ -42,7 +53,7 @@ AI 폴더에서 `python notebooks/experiments/sun_visible_probe/model3_export_pr
 
 **같은 사진의 오프라인 공동 실행기:** `joint_candidate_probe.py`는 고정②/③ 묶음을 한 JPEG와 해당 사진의 실제 촬영정보에 적용한 뒤 통합 검수기로 전달한다. 모델②는 photo_g+상대특징, 모델③은 원래 사진10특징/NOAA해높이로 각각 계산하며 원출력을 보존한다. 입구로 확인한 근거·관측/구간ID·시험정책·evidence를 명시해야 한다. 사진이 두 실행 사이에 바뀌면 거절하고 실제 수신/조회시각을 사용하므로 과거 사진을 오늘 재실행해도 신선한 관측으로 바뀌지 않는다. 합성 입력은 두 모델의 구동검증에만 쓰고 실제 안내는 미확인으로 남긴다. 모델계수 묶음은 별도 비공개 자료이며 새 웹 API를 추가하지 않는다. `--help`의 필수 인수로 실행하고 새 결과는 AI/data 안에만 저장한다. 실제 동일 입구사진·완전한 G/기상정보·외부66결과의 검증은 별도다.
 
-모델②는 기존 정답과 성진50장 원본 라벨을 보존한다. 동일320장·촬영그룹 CV의 기준 Macro F1 .6229와 새 특징을 비교하며, 성진50장 사진 모델 평가는 다른 조건으로 보고한다. 성능 개선이 검증될 때까지 최종 모델 결정을 보류한다. 사진의 대비나 밝기 수식으로 정답을 새로 만들어 같은 입력으로 평가하지 않는다.
+모델②는 기존 정답과 성진50장 원본 라벨을 보존한다. 동일320장·촬영그룹 CV의 기준 Macro F1 .6229와 새 특징을 비교하며, 성진50장 사진 모델 평가는 다른 조건으로 보고한다. 2026-11-06 발표 기준 모델을 `B_geometry_aug`(2단계 로지스틱, 2단계에 추가 자료·각도 정보)로 선정했다. 운영 API 교체와 독립 일반화 검증은 별도다. 사진의 대비나 밝기 수식으로 정답을 새로 만들어 같은 입력으로 평가하지 않는다.
 
 **AI 보조 라벨링은 검토 제안이다.** 기존 Claude 임시 라벨은 사람과 공통48장 중34장 일치(70.8%, 카파 .473)했다. Gemini 등 추가 이미지 이해 모델 후보에는 사람·기존 AI 답안을 숨기고 태양/번짐 근거, 대상별 식별성, 저하 원인, 등급 또는 판단 보류를 기록하게 하는 방안을 검토한다. 후보 우위·새 AI 판정은 미검증이며 AI 합의를 실제 운전자 정답으로 간주하지 않는다. AI 학습 라벨과 사람 평가를 구분한다. 최종 분류기는 딥러닝·신경망 임베딩 없이 전통 머신러닝으로 실험한다.
 
