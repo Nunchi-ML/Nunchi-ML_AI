@@ -55,6 +55,8 @@ AI 폴더에서 `python notebooks/experiments/sun_visible_probe/model3_export_pr
 
 ### 발표·보고서와 구현 상태 대조 (2026-11-06)
 
+**과학·신체 원리(설계 배경):** 눈 안의 산란광이 망막상의 대비와 시인성을 낮출 수 있다는 [IES의 disability glare 정의](https://ies.org/definitions/disability-glare/), 밝기 변화에 따른 [망막의 감도 적응(Webvision)](https://www.webvision.pitt.edu/book/part-viii-psychophysics-of-vision/light-and-dark-adaptation/)을 두 문제의 배경으로 설명한다. [동공은 들어오는 빛의 양을 조절한다(NEI)](https://www.nei.nih.gov/eye-health-information/healthy-vision/how-eyes-work). 현재 사진 등급·입구 대비 등급과 실제 운전자의 시야·적응 완료시간 측정은 구분한다. 동공 크기만으로 적응 완료를 판단하거나 카메라 과노출/3D 번짐을 눈 안 산란의 측정값으로 보지 않는다. 발표는 원리45초+모델 연결15초의1장, 세부 수식/완전 암순응 곡선은 부록으로 둔다. 출처 확인2026-11-06.
+
 | 발표 이름 | 현재 확인한 범위 | 구분할 내용 |
 |---|---|---|
 | 태양광 눈부심 분류 모델(②) | B_geometry_aug 발표 시제품 기준 선택. 반복 촬영CV F1 .63965·심함 재현율 .64110, 정상→심함 회차평균16.63→7.87 | 원자료 조건부 .63568/.69406과 교환. 개발 중 평가자료 반복 참조·F1 차이 구간0 포함. 독립 우위/운영 교체 아님 |
