@@ -2,6 +2,27 @@
 
 **상태: 실험 후보 비교 기록. 최종 모델 선정은 성능 개선 검증까지 보류하며 배포 features.py·모델/API는 유지한다.**
 
+## 최신 완료 범위와 후보 추론 묶음 — 2026-11-06
+
+사용자는 도시 CCTV를 현재 연결할 수 없어 **실제 적용 시의 확장 구상**으로 제시하는 방향을 정했다. 이번 프로젝트의 구현·검증 범위는 보유 사진과 G의 모델 비교·재현 가능한 추론 및 시뮬레이터 표현으로 구분한다. 아래의 CCTV 확보 우선순위는 이전 확장 검토 기록이다. 실제 CCTV 수집·전 경로 최적화·사고감소 효과를 완료로 표시하지 않는다.
+
+`export_hybrid_candidate.py`와 공통 패키지 `nunchi_ml.glare.hybrid`는 기존 G전용·원자료 조건부·사진+G `B_geometry_aug` 후보 3개를 JSON 계수 묶음으로 내보낸다. A는 원320장, 보강 B는 원자료+기존 AIHub의 양성만 사용하며 기존0/1/2·balanced 로지스틱 C=1·.5/.5 판정을 유지한다. `parameters.json`·`meta.json`·사진별 결과는 private 데이터 폴더에만 둔다. 후보 묶음은 `status=candidate`, `roadside_validated=false`이며 운영 시범 모델 교체·최종 선정과 다르다.
+
+```bash
+python notebooks/experiments/sun_visible_probe/export_hybrid_candidate.py --data data --out data/hybrid_candidate_NEW
+python -m nunchi_ml.glare.hybrid --bundle data/hybrid_candidate_NEW --image PHOTO.jpg --context context.json --out prediction_NEW.json
+```
+
+context에는 `lat`, `lon`, `heading`(북0·시계방향), `focal`(긴 변 기준 정규화 초점거리), 원본 `width/height`, 시간대가 있는 `captured_at`, `cloud`(0~10), `sunshine`(0~1), `weather_observed_at`, `weather_source`, `geometry_source`, `projection=legacy_level_assumed`가 필요하다. 확인된 경우만 `weather_available_at`을 넣는다. 사진 시점의 G를 만들고 원본 크기·결측·범위를 검사한다. 새 카메라의 수준 자세 가정·실시간 날씨 공개시각이 검증됐다는 뜻은 아니다. 실제 CCTV의 방향/화각을 대표좌표·북향으로 채우지 않는다.
+
+`relative.py`는 기존 `rel_features.py`의 추출을 고정한 후보용 복사본이다. 기존 배포 `features.py`와 실험 소스는 유지한다. 원624장의 원본 해시·실험/패키지 특징 일치를 확인했으며 캐시와 최대 오차는 1.78e-15이다. 저장된 첫 OOF 5겹과 카메라 제외3조건의 총640판정이 일치했고 A/B 점수 오차는 최대2.29e-13이다. 3후보×624행 내보내기/재로딩도 일치했다. 이는 **직렬화·전처리 정합성 검사**이며 새 F1 개선이나 독립 검증이 아니다. 기존 .63965·규칙 비교/심함 누락 한계는 그대로다.
+
+`roadside.py`는 확장용 사진 시각/방향·구간 대응 함수다. 관측범위 근거·수신시각·사진해시와 명시적 시험용 유효시간/방향오차 정책을 받는다. 미관측·오래된 사진·방향 불일치는 미확인으로 남긴다. 미래 ETA에는 현재 관측 등급을 별도로 보여주고 미래 등급은 공란으로 유지한다. CCTV가 실제 연결되거나 정책값이 검증된 기능은 아니다.
+
+검증: 전체 **359테스트 통과**(기존 CORAL 경고4), 보유 AIHub 원JPEG의 사진+G CLI 추론 실행 성공. 로컬 초기는 pvlib 누락과 샌드박스 임시폴더 제한으로 수집/fixture 오류가 났으며, 선언된 의존성 설치와 새 사용자 임시폴더에서 전체 통과했다. 원자료/라벨·운영모델/API 변경은 없다.
+
+공식자료 확인: [UTIC CCTV](https://www.utic.go.kr/guide/utisRefCctv.do)는 URL·키/IP 인증과 제공 중단 가능성을 안내하며, [ITS](https://www.its.go.kr/opendata/opendataList?service=cctv)는 고속도로/국도 공개 API 경로다. 대구 공개 교통 페이지의 직접 조회는 HTTP500이었고 프로젝트의 승인 연결·방향별 CCTV 자료는 미확보다. 이 조사는 실제 영상 수집·학습 이용권한 확보가 아니다.
+
 화면 숫자 12개(`glare/features.py`)는 절대 밝기 문턱을 써서 카메라가 바뀌면 무너졌다. 여기서는 사진 한 장 안에서만, 그 사진의 중앙값 · 최고 밝기에 대한 **비율**로 계산한 특징 12개를 만들고, 눈부심 여부 쪽에만 붙인 **두 단계**(여부 = G + 상대 12, 심함 = G)를 같은 프로토콜로 비교한다.
 
 | 파일 | 역할 |
