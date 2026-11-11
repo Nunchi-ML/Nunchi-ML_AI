@@ -57,20 +57,21 @@
 ## 📁 폴더
 
 ```
-📂 src/nunchi_ml/                 같이 쓰는 코드 (BE도 이 패키지를 그대로 씀)
- ├─ 📂 glare/                     눈부심 모델 — 특징 · 두 단계 모델(hybrid) · 배포 묶음
- ├─ 📂 tunnel/                    터널 모델 — 밝기 · 등급 계산
- ├─ sun.py · camera.py · weather.py   해 위치 · 카메라 화각 · 날씨 붙이기
-📂 notebooks/experiments/         실험 — 실험 하나 = 폴더 하나
- ├─ 📂 glare_video_source/        눈부심 모델 실험
- ├─ 📂 sun_visible_probe/         선정 모델 · 통합 검수
- ├─ 📂 tunnel_photo_brightness/   터널 모델 실험 (대표 모델: 10_등급2단계_로지스틱.ipynb)
- └─ 📂 tunnel_adaptation/         동공 · 순응 계산
-📂 tests/                         nunchi_ml 테스트 — PR마다 자동 실행
-📂 data/ · models/                원본 데이터 · 모델 묶음 ← git에 올리지 않음
+📂 src/nunchi_ml/          같이 쓰는 코드 (BE도 그대로 씀)
+ ├─ glare/                눈부심 모델
+ ├─ tunnel/               터널 모델
+ └─ sun · camera · weather  해 위치 · 화각 · 날씨
+📂 notebooks/experiments/  실험 (폴더 하나 = 실험 하나)
+ ├─ glare_video_source/   눈부심 실험
+ ├─ sun_visible_probe/    선정 모델 · 통합 검수
+ ├─ tunnel_photo_brightness/  터널 실험
+ └─ tunnel_adaptation/    동공 · 순응 계산
+📂 tests/                  자동 테스트 (PR마다 실행)
+📂 data/ · models/         데이터 · 모델 묶음 (git 제외)
 ```
 
-- 원본 데이터는 용량이 크고 일부는 재배포가 안 돼서 git 대신 팀 드라이브로, 모델은 GitHub Release로 주고받았습니다.
+- 터널 대표 모델 노트북: `notebooks/experiments/tunnel_photo_brightness/10_등급2단계_로지스틱.ipynb`
+- 원본 데이터는 용량이 크고 일부는 재배포가 안 돼서 팀 드라이브로, 모델은 GitHub Release로 주고받았습니다.
 
 ## 🧰 기술 스택
 
